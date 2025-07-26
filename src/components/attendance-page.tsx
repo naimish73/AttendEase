@@ -48,6 +48,8 @@ type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
   id: string;
   name: string;
+  class: string;
+  mobile: string;
   status: AttendanceStatus | null;
 };
 
@@ -56,6 +58,8 @@ export const AttendancePage: FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddStudentOpen, setAddStudentOpen] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentClass, setNewStudentClass] = useState("");
+  const [newStudentMobile, setNewStudentMobile] = useState("");
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
 
@@ -71,6 +75,7 @@ export const AttendancePage: FC = () => {
       setStudents(studentsList);
       setLoading(false);
     }, (error) => {
+      console.error("Error fetching students: ", error);
       toast({
         title: "Error fetching students",
         description: "Could not retrieve student data from Firestore.",
@@ -96,10 +101,10 @@ export const AttendancePage: FC = () => {
   };
 
   const handleAddStudent = async () => {
-    if (newStudentName.trim() === "") {
+    if (newStudentName.trim() === "" || newStudentClass.trim() === "" || newStudentMobile.trim() === "") {
         toast({
             title: "Error",
-            description: "Student name cannot be empty.",
+            description: "All student fields are required.",
             variant: "destructive"
         })
         return;
@@ -107,11 +112,19 @@ export const AttendancePage: FC = () => {
     try {
         const newStudent = {
             name: newStudentName,
+            class: newStudentClass,
+            mobile: newStudentMobile,
             status: null,
         };
         await addDoc(collection(db, "students"), newStudent);
         setNewStudentName("");
+        setNewStudentClass("");
+        setNewStudentMobile("");
         setAddStudentOpen(false);
+        toast({
+            title: "Success",
+            description: "Student added successfully.",
+        })
     } catch (error) {
         toast({
             title: "Error",
@@ -125,6 +138,8 @@ export const AttendancePage: FC = () => {
     const worksheetData = students.map(s => ({
       ID: s.id,
       Name: s.name,
+      Class: s.class,
+      "Mobile No.": s.mobile,
       Status: s.status || 'Unmarked'
     }));
 
@@ -177,7 +192,7 @@ export const AttendancePage: FC = () => {
               <DialogHeader>
                 <DialogTitle>Add New Student</DialogTitle>
                 <DialogDescription>
-                  Enter the name of the new student to add them to the attendance list.
+                  Enter the details of the new student to add them to the attendance list.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -191,6 +206,30 @@ export const AttendancePage: FC = () => {
                     onChange={(e) => setNewStudentName(e.target.value)}
                     className="col-span-3"
                     placeholder="e.g. Jane Doe"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="class" className="text-right">
+                    Class
+                  </Label>
+                  <Input
+                    id="class"
+                    value={newStudentClass}
+                    onChange={(e) => setNewStudentClass(e.target.value)}
+                    className="col-span-3"
+                    placeholder="e.g. 10A"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="mobile" className="text-right">
+                    Mobile No.
+                  </Label>
+                  <Input
+                    id="mobile"
+                    value={newStudentMobile}
+                    onChange={(e) => setNewStudentMobile(e.target.value)}
+                    className="col-span-3"
+                    placeholder="e.g. 123-456-7890"
                   />
                 </div>
               </div>
@@ -228,7 +267,9 @@ export const AttendancePage: FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40%]">Student Name</TableHead>
+                  <TableHead>Student Name</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Mobile No.</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -236,7 +277,7 @@ export const AttendancePage: FC = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                       Loading students...
                     </TableCell>
                   </TableRow>
@@ -244,6 +285,8 @@ export const AttendancePage: FC = () => {
                   filteredStudents.map((student) => (
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">{student.name}</TableCell>
+                      <TableCell>{student.class}</TableCell>
+                      <TableCell>{student.mobile}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(student.status)}>
                             {student.status || 'Unmarked'}
@@ -270,7 +313,7 @@ export const AttendancePage: FC = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                       No students found. Add a student to get started.
                     </TableCell>
                   </TableRow>
