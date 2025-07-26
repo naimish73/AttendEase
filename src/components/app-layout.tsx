@@ -34,7 +34,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-                <Link href="/" passHref legacyBehavior>
+                <Link href="/" passHref>
                     <SidebarMenuButton asChild isActive={pathname === '/'}>
                         <a>
                             <ClipboardCheck />
@@ -44,7 +44,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-                <Link href="/students" passHref legacyBehavior>
+                <Link href="/students" passHref>
                     <SidebarMenuButton asChild isActive={pathname === '/students'}>
                         <a>
                             <Users />
