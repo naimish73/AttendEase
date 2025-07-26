@@ -172,7 +172,7 @@ export const AttendancePage: FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
+    <div className="container mx-auto p-4 md:p-8 bg-background min-h-screen">
       <header className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <ClipboardCheck className="h-8 w-8 text-primary" />
@@ -246,7 +246,7 @@ export const AttendancePage: FC = () => {
         </div>
       </header>
 
-      <Card>
+      <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Attendance List</CardTitle>
           <CardDescription>
@@ -263,15 +263,15 @@ export const AttendancePage: FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-md">
+          <div className="border rounded-md overflow-hidden">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead>Student Name</TableHead>
+                  <TableHead className="w-[200px]">Student Name</TableHead>
                   <TableHead>Class</TableHead>
                   <TableHead>Mobile No.</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right w-[160px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -283,12 +283,12 @@ export const AttendancePage: FC = () => {
                   </TableRow>
                 ) : filteredStudents.length > 0 ? (
                   filteredStudents.map((student) => (
-                    <TableRow key={student.id}>
+                    <TableRow key={student.id} className="hover:bg-muted/20">
                       <TableCell className="font-medium">{student.name}</TableCell>
                       <TableCell>{student.class}</TableCell>
                       <TableCell>{student.mobile}</TableCell>
                       <TableCell>
-                        <Badge variant={getStatusBadgeVariant(student.status)}>
+                        <Badge variant={getStatusBadgeVariant(student.status)} className="capitalize">
                             {student.status || 'Unmarked'}
                         </Badge>
                       </TableCell>
