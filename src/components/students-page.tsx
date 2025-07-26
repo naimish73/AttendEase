@@ -55,6 +55,16 @@ export const StudentsPage: FC = () => {
         id: doc.id,
         ...doc.data(),
       })) as Student[];
+      
+      // Sort students by class, then by name
+      studentsList.sort((a, b) => {
+        const classComparison = a.class.localeCompare(b.class);
+        if (classComparison !== 0) {
+          return classComparison;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
       setStudents(studentsList);
       setLoading(false);
     }, (error) => {
