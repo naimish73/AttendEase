@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
-import { Download, Search, RotateCcw } from "lucide-react";
+import { Download, Search, RotateCcw, UserCheck, UserClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -45,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query, writeBatch } from "firebase/firestore";
 import * as XLSX from 'xlsx';
+import { Separator } from "./ui/separator";
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -94,6 +95,10 @@ export const AttendancePage: FC = () => {
 
     return () => unsubscribe();
   }, [toast]);
+  
+  const presentCount = useMemo(() => students.filter(s => s.status === 'Present').length, [students]);
+  const lateCount = useMemo(() => students.filter(s => s.status === 'Late').length, [students]);
+
 
   const handleStatusChange = async (studentId: string, status: AttendanceStatus) => {
     try {
@@ -259,14 +264,33 @@ export const AttendancePage: FC = () => {
                 </Dialog>
             </div>
         </div>
-        <div className="relative pt-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, class, or mobile..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 w-full"
-          />
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-4">
+          <div className="relative w-full md:flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, class, or mobile..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-full"
+            />
+          </div>
+          <div className="flex gap-4 items-center p-2 rounded-lg bg-muted/50 w-full md:w-auto">
+            <div className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="font-bold text-lg">{presentCount}</p>
+                <p className="text-xs text-muted-foreground">Present</p>
+              </div>
+            </div>
+            <Separator orientation="vertical" className="h-8" />
+            <div className="flex items-center gap-2">
+              <UserClock className="h-5 w-5 text-yellow-600" />
+              <div>
+                <p className="font-bold text-lg">{lateCount}</p>
+                <p className="text-xs text-muted-foreground">Late</p>
+              </div>
+            </div>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

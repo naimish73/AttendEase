@@ -20,7 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query } from "firebase/firestore";
-import { User } from "lucide-react";
+import { RotateCcw, User } from "lucide-react";
 
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
@@ -100,6 +100,14 @@ export const TeamShufflePage: FC = () => {
       });
   };
 
+  const handleReset = () => {
+    setShuffledTeams([]);
+    toast({
+      title: "Teams Reset",
+      description: "Shuffled teams have been cleared.",
+    });
+  };
+
   return (
     <Card className="shadow-lg h-full">
       <CardHeader>
@@ -131,6 +139,12 @@ export const TeamShufflePage: FC = () => {
             <Button onClick={handleShuffle} disabled={loading}>
                 {loading ? 'Loading...' : 'Shuffle Teams'}
             </Button>
+            {shuffledTeams.length > 0 && (
+                <Button variant="outline" onClick={handleReset}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reset
+                </Button>
+            )}
            </div>
         </div>
 
