@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, writeBatch } from "firebase/firestore";
+import { collection, writeBatch, doc } from "firebase/firestore";
 import { Database, Loader } from "lucide-react";
 import { Progress } from "./ui/progress";
 
