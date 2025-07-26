@@ -36,20 +36,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
                 <Link href="/" passHref>
                     <SidebarMenuButton asChild isActive={pathname === '/'}>
-                        <a>
+                        <span>
                             <ClipboardCheck />
                             Attendance
-                        </a>
+                        </span>
                     </SidebarMenuButton>
                 </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <Link href="/students" passHref>
                     <SidebarMenuButton asChild isActive={pathname === '/students'}>
-                        <a>
+                        <span>
                             <Users />
                             Manage Students
-                        </a>
+                        </span>
                     </SidebarMenuButton>
                 </Link>
             </SidebarMenuItem>
