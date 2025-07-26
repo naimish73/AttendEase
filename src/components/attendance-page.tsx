@@ -39,6 +39,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query, writeBatch } from "firebase/firestore";
@@ -58,6 +60,7 @@ export const AttendancePage: FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [exportFileName, setExportFileName] = useState("");
 
   useEffect(() => {
     const studentsCollection = collection(db, "students");
@@ -134,6 +137,15 @@ export const AttendancePage: FC = () => {
   };
 
   const handleExport = () => {
+    if (!exportFileName.trim()) {
+        toast({
+            title: "Error",
+            description: "Please enter a valid file name.",
+            variant: "destructive",
+        });
+        return;
+    }
+
     const worksheetData = students.map(s => ({
       ID: s.id,
       Name: s.name,
@@ -146,13 +158,14 @@ export const AttendancePage: FC = () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
 
-    const date = new Date().toISOString().split("T")[0];
-    XLSX.writeFile(workbook, `attendance-report-${date}.xlsx`);
+    XLSX.writeFile(workbook, `${exportFileName.trim()}.xlsx`);
 
     toast({
         title: "Export Successful",
-        description: "Attendance report has been downloaded.",
+        description: `Attendance report "${exportFileName.trim()}.xlsx" has been downloaded.`,
     })
+
+    setExportFileName(""); // Reset for next time
   };
 
   const filteredStudents = useMemo(
@@ -206,10 +219,44 @@ export const AttendancePage: FC = () => {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                <Button variant="outline" onClick={handleExport}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export XLS
-                </Button>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline">
+                            <Download className="mr-2 h-4 w-4" />
+                            Export XLS
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Export Attendance</DialogTitle>
+                            <DialogDescription>
+                                Please enter a name for the export file.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="fileName" className="text-right">
+                                    File Name
+                                </Label>
+                                <Input
+                                    id="fileName"
+                                    value={exportFileName}
+                                    onChange={(e) => setExportFileName(e.target.value)}
+                                    placeholder="e.g., Attendance-Report-2024"
+                                    className="col-span-3"
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="secondary">Cancel</Button>
+                            </DialogClose>
+                            <DialogClose asChild>
+                                <Button onClick={handleExport}>Download</Button>
+                            </DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </div>
         <div className="relative pt-2">
