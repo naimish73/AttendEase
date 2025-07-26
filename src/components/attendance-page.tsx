@@ -100,7 +100,7 @@ export const AttendancePage: FC = () => {
       ID: s.id,
       Name: s.name,
       Class: s.class,
-      "Mobile No.": s.mobile,
+      "Mobile No.": s.mobile || '',
       Status: s.status || 'Unmarked'
     }));
 
@@ -119,9 +119,13 @@ export const AttendancePage: FC = () => {
 
   const filteredStudents = useMemo(
     () =>
-      students.filter((student) =>
-        student.name.toLowerCase().includes(searchTerm.toLowerCase())
-      ),
+      students.filter((student) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          student.name.toLowerCase().includes(term) ||
+          (student.mobile && student.mobile.toLowerCase().includes(term))
+        );
+      }),
     [students, searchTerm]
   );
   
@@ -150,7 +154,7 @@ export const AttendancePage: FC = () => {
         <div className="relative pt-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by student name..."
+            placeholder="Search by name or mobile..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 w-full"

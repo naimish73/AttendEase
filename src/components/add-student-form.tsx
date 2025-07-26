@@ -29,7 +29,7 @@ import { collection, addDoc } from "firebase/firestore";
 const studentSchema = z.object({
   name: z.string().min(1, "Name is required"),
   class: z.string().min(1, "Class is required"),
-  mobile: z.string().min(10, "Mobile number must be at least 10 digits").max(15, "Mobile number is too long"),
+  mobile: z.string().max(15, "Mobile number is too long").optional(),
 });
 
 type StudentFormValues = z.infer<typeof studentSchema>;
@@ -107,7 +107,7 @@ export const AddStudentForm: FC = () => {
               name="mobile"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mobile No.</FormLabel>
+                  <FormLabel>Mobile No. (Optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. 9876543210" type="tel" {...field} />
                   </FormControl>
