@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
@@ -40,6 +41,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, addDoc, doc, updateDoc, query } from "firebase/firestore";
+import * as XLSX from 'xlsx';
+
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -109,10 +112,6 @@ export const AttendancePage: FC = () => {
         await addDoc(collection(db, "students"), newStudent);
         setNewStudentName("");
         setAddStudentOpen(false);
-        toast({
-            title: "Student Added",
-            description: `${newStudentName} has been successfully added.`,
-        })
     } catch (error) {
         toast({
             title: "Error",
@@ -123,21 +122,19 @@ export const AttendancePage: FC = () => {
   };
 
   const handleExport = () => {
-    const csvHeader = "ID,Name,Status\n";
-    const csvRows = students
-      .map((s) => `${s.id},"${s.name}",${s.status || "Unmarked"}`)
-      .join("\n");
-    const csvContent = csvHeader + csvRows;
+    const worksheetData = students.map(s => ({
+      ID: s.id,
+      Name: s.name,
+      Status: s.status || 'Unmarked'
+    }));
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+
     const date = new Date().toISOString().split("T")[0];
-    link.setAttribute("download", `attendance-report-${date}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    XLSX.writeFile(workbook, `attendance-report-${date}.xlsx`);
+
     toast({
         title: "Export Successful",
         description: "Attendance report has been downloaded.",
@@ -158,54 +155,6 @@ export const AttendancePage: FC = () => {
     if (status === 'Late') return 'secondary';
     return 'outline';
   }
-
-  const renderTableContent = () => {
-    if (loading) {
-      return (
-        <TableRow>
-          <TableCell colSpan={3} className="h-24 text-center">
-            Loading students...
-          </TableCell>
-        </TableRow>
-      );
-    }
-    if (filteredStudents.length > 0) {
-      return filteredStudents.map((student) => (
-        <TableRow key={student.id}>
-          <TableCell className="font-medium">{student.name}</TableCell>
-          <TableCell>
-            <Badge variant={getStatusBadgeVariant(student.status)}>
-                {student.status || 'Unmarked'}
-            </Badge>
-          </TableCell>
-          <TableCell className="text-right">
-            <Select
-              value={student.status ?? ""}
-              onValueChange={(value: AttendanceStatus) =>
-                handleStatusChange(student.id, value)
-              }
-            >
-              <SelectTrigger className="w-[140px] ml-auto">
-                <SelectValue placeholder="Set Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Present">Present</SelectItem>
-                <SelectItem value="Absent">Absent</SelectItem>
-                <SelectItem value="Late">Late</SelectItem>
-              </SelectContent>
-            </Select>
-          </TableCell>
-        </TableRow>
-      ));
-    }
-    return (
-      <TableRow>
-        <TableCell colSpan={3} className="h-24 text-center">
-          No students found. Add a student to get started.
-        </TableCell>
-      </TableRow>
-    );
-  };
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -285,7 +234,47 @@ export const AttendancePage: FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {renderTableContent()}
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                      Loading students...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => (
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium">{student.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(student.status)}>
+                            {student.status || 'Unmarked'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Select
+                          value={student.status ?? ""}
+                          onValueChange={(value: AttendanceStatus) =>
+                            handleStatusChange(student.id, value)
+                          }
+                        >
+                          <SelectTrigger className="w-[140px] ml-auto">
+                            <SelectValue placeholder="Set Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Present">Present</SelectItem>
+                            <SelectItem value="Absent">Absent</SelectItem>
+                            <SelectItem value="Late">Late</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                      No students found. Add a student to get started.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
