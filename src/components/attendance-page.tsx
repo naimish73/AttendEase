@@ -159,6 +159,54 @@ export const AttendancePage: FC = () => {
     return 'outline';
   }
 
+  const renderTableContent = () => {
+    if (loading) {
+      return (
+        <TableRow>
+          <TableCell colSpan={3} className="h-24 text-center">
+            Loading students...
+          </TableCell>
+        </TableRow>
+      );
+    }
+    if (filteredStudents.length > 0) {
+      return filteredStudents.map((student) => (
+        <TableRow key={student.id}>
+          <TableCell className="font-medium">{student.name}</TableCell>
+          <TableCell>
+            <Badge variant={getStatusBadgeVariant(student.status)}>
+                {student.status || 'Unmarked'}
+            </Badge>
+          </TableCell>
+          <TableCell className="text-right">
+            <Select
+              value={student.status ?? ""}
+              onValueChange={(value: AttendanceStatus) =>
+                handleStatusChange(student.id, value)
+              }
+            >
+              <SelectTrigger className="w-[140px] ml-auto">
+                <SelectValue placeholder="Set Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Present">Present</SelectItem>
+                <SelectItem value="Absent">Absent</SelectItem>
+                <SelectItem value="Late">Late</SelectItem>
+              </SelectContent>
+            </Select>
+          </TableCell>
+        </TableRow>
+      ));
+    }
+    return (
+      <TableRow>
+        <TableCell colSpan={3} className="h-24 text-center">
+          No students found. Add a student to get started.
+        </TableCell>
+      </TableRow>
+    );
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-8">
       <header className="flex items-center justify-between mb-8">
@@ -237,47 +285,7 @@ export const AttendancePage: FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
-                      Loading students...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(student.status)}>
-                            {student.status || 'Unmarked'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Select
-                          value={student.status ?? ""}
-                          onValueChange={(value: AttendanceStatus) =>
-                            handleStatusChange(student.id, value)
-                          }
-                        >
-                          <SelectTrigger className="w-[140px] ml-auto">
-                            <SelectValue placeholder="Set Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Present">Present</SelectItem>
-                            <SelectItem value="Absent">Absent</SelectItem>
-                            <SelectItem value="Late">Late</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
-                      No students found. Add a student to get started.
-                    </TableCell>
-                  </TableRow>
-                )}
+                {renderTableContent()}
               </TableBody>
             </Table>
           </div>
