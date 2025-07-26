@@ -123,6 +123,7 @@ export const AttendancePage: FC = () => {
         const term = searchTerm.toLowerCase();
         return (
           student.name.toLowerCase().includes(term) ||
+          student.class.toLowerCase().includes(term) ||
           (student.mobile && student.mobile.toLowerCase().includes(term))
         );
       }),
@@ -154,7 +155,7 @@ export const AttendancePage: FC = () => {
         <div className="relative pt-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name or mobile..."
+            placeholder="Search by name, class, or mobile..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 w-full"
