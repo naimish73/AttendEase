@@ -31,7 +31,6 @@ export const CameraCapture: FC<CameraCaptureProps> = ({ onCapture }) => {
 
   useEffect(() => {
     const enableStream = async () => {
-      if (isDialogOpen) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           streamRef.current = stream;
@@ -48,17 +47,19 @@ export const CameraCapture: FC<CameraCaptureProps> = ({ onCapture }) => {
             description: "Please enable camera permissions in your browser settings.",
           });
         }
-      }
     };
-    enableStream();
 
-    // Cleanup function to stop the stream when the component unmounts or dialog closes
+    if (isDialogOpen && !capturedImage) {
+      enableStream();
+    }
+
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
     };
-  }, [isDialogOpen, toast]);
+  }, [isDialogOpen, capturedImage, toast]);
 
   const handleCapture = () => {
     if (videoRef.current && canvasRef.current) {
@@ -71,6 +72,12 @@ export const CameraCapture: FC<CameraCaptureProps> = ({ onCapture }) => {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imageDataUrl = canvas.toDataURL("image/png");
         setCapturedImage(imageDataUrl);
+
+        // Stop the stream after capture
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
       }
     }
   };
