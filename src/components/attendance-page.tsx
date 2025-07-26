@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
-import { Download, Search } from "lucide-react";
+import { Download, Search, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,9 +28,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, updateDoc, query } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, query, writeBatch } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
@@ -58,7 +69,6 @@ export const AttendancePage: FC = () => {
         ...doc.data(),
       })) as Student[];
 
-      // Sort students by class, then by name
       studentsList.sort((a, b) => {
         const classComparison = a.class.localeCompare(b.class);
         if (classComparison !== 0) {
@@ -92,6 +102,34 @@ export const AttendancePage: FC = () => {
             description: "Failed to update student status.",
             variant: "destructive"
         })
+    }
+  };
+
+  const handleResetAll = async () => {
+    if (students.length === 0) {
+      toast({
+        title: "No Students",
+        description: "There are no students to reset.",
+      });
+      return;
+    }
+    try {
+      const batch = writeBatch(db);
+      students.forEach(student => {
+        const studentRef = doc(db, "students", student.id);
+        batch.update(studentRef, { status: null });
+      });
+      await batch.commit();
+      toast({
+        title: "Success",
+        description: "All student attendance has been reset.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reset attendance. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -147,10 +185,32 @@ export const AttendancePage: FC = () => {
                 Mark and view student attendance.
                 </CardDescription>
             </div>
-            <Button variant="outline" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" />
-                Export XLS
-            </Button>
+            <div className="flex gap-2">
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="outline">
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Reset All
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will reset the attendance status for all students to 'Unmarked'. This action cannot be undone.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleResetAll}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export XLS
+                </Button>
+            </div>
         </div>
         <div className="relative pt-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
