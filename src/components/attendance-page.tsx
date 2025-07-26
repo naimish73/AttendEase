@@ -39,7 +39,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, addDoc, doc, updateDoc, query } from "firebase/firestore";
+import { collection, onSnapshot, addDoc, doc, updateDoc, query } from "firebase/firestore";
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -56,40 +56,33 @@ export const AttendancePage: FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
 
-  const fetchStudents = async () => {
-    try {
-      setLoading(true);
-      const studentsCollection = collection(db, "students");
-      const studentsSnapshot = await getDocs(query(studentsCollection));
-      const studentsList = studentsSnapshot.docs.map(doc => ({
+  useEffect(() => {
+    const studentsCollection = collection(db, "students");
+    const q = query(studentsCollection);
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const studentsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
       })) as Student[];
       setStudents(studentsList);
-    } catch (error) {
+      setLoading(false);
+    }, (error) => {
       toast({
         title: "Error fetching students",
         description: "Could not retrieve student data from Firestore.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
-    }
-  };
+    });
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
+    return () => unsubscribe();
+  }, [toast]);
 
   const handleStatusChange = async (studentId: string, status: AttendanceStatus) => {
     try {
         const studentRef = doc(db, "students", studentId);
         await updateDoc(studentRef, { status });
-        setStudents(
-            students.map((student) =>
-                student.id === studentId ? { ...student, status } : student
-            )
-        );
     } catch (error) {
         toast({
             title: "Error",
@@ -113,8 +106,7 @@ export const AttendancePage: FC = () => {
             name: newStudentName,
             status: null,
         };
-        const docRef = await addDoc(collection(db, "students"), newStudent);
-        setStudents([...students, { id: docRef.id, ...newStudent }]);
+        await addDoc(collection(db, "students"), newStudent);
         setNewStudentName("");
         setAddStudentOpen(false);
         toast({
