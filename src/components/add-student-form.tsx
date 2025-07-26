@@ -30,6 +30,7 @@ const studentSchema = z.object({
   name: z.string().min(1, "Name is required"),
   class: z.string().min(1, "Class is required"),
   mobile: z.string().max(15, "Mobile number is too long").optional(),
+  imageUrl: z.string().optional(),
 });
 
 type StudentFormValues = z.infer<typeof studentSchema>;
@@ -42,6 +43,7 @@ export const AddStudentForm: FC = () => {
       name: "",
       class: "",
       mobile: "",
+      imageUrl: "",
     },
   });
 
@@ -62,6 +64,7 @@ export const AddStudentForm: FC = () => {
 
       await addDoc(collection(db, "students"), {
         ...data,
+        imageUrl: data.imageUrl || `https://placehold.co/100x100.png`,
         status: null, // Initial status
       });
       toast({
@@ -123,6 +126,19 @@ export const AddStudentForm: FC = () => {
                   <FormLabel>Mobile No. (Optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. 9876543210" type="tel" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Profile Image URL (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. https://example.com/image.png" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

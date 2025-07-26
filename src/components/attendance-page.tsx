@@ -46,6 +46,7 @@ import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query, writeBatch } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { Separator } from "./ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -54,6 +55,7 @@ type Student = {
   class: string;
   mobile: string;
   status: AttendanceStatus | null;
+  imageUrl?: string;
 };
 
 export const AttendancePage: FC = () => {
@@ -314,7 +316,13 @@ export const AttendancePage: FC = () => {
               ) : filteredStudents.length > 0 ? (
                 filteredStudents.map((student) => (
                   <TableRow key={student.id} className="hover:bg-muted/20">
-                    <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell className="font-medium flex items-center gap-3">
+                        <Avatar>
+                            <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
+                            <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        {student.name}
+                    </TableCell>
                     <TableCell>{student.class}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(student.status)} className="capitalize">

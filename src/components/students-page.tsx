@@ -33,12 +33,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, deleteDoc, query } from "firebase/firestore";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 type Student = {
   id: string;
   name: string;
   class: string;
   mobile: string;
+  imageUrl?: string;
 };
 
 export const StudentsPage: FC = () => {
@@ -130,7 +132,13 @@ export const StudentsPage: FC = () => {
               ) : students.length > 0 ? (
                 students.map((student) => (
                   <TableRow key={student.id} className="hover:bg-muted/20">
-                    <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell className="font-medium flex items-center gap-3">
+                      <Avatar>
+                          <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
+                          <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      {student.name}
+                    </TableCell>
                     <TableCell>{student.class}</TableCell>
                     <TableCell>{student.mobile}</TableCell>
                     <TableCell className="text-right">

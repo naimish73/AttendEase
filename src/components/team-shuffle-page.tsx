@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { RotateCcw, User } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
@@ -30,6 +31,7 @@ type Student = {
   class: string;
   mobile: string;
   status: AttendanceStatus | null;
+  imageUrl?: string;
 };
 
 export const TeamShufflePage: FC = () => {
@@ -160,7 +162,10 @@ export const TeamShufflePage: FC = () => {
                     <ul className="space-y-3">
                         {team.map(student => (
                             <li key={student.id} className="flex items-center gap-3">
-                                <User className="h-5 w-5 text-muted-foreground" />
+                                <Avatar>
+                                    <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
+                                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
                                 <span className="font-medium">{student.name}</span>
                                 <span className="text-sm text-muted-foreground ml-auto">{student.class}</span>
                             </li>
