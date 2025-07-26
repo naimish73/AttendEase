@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 
 const studentSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -47,6 +47,19 @@ export const AddStudentForm: FC = () => {
 
   const onSubmit = async (data: StudentFormValues) => {
     try {
+      const studentsRef = collection(db, "students");
+      const q = query(studentsRef, where("name", "==", data.name));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        toast({
+          title: "Error",
+          description: "A student with this name already exists.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       await addDoc(collection(db, "students"), {
         ...data,
         status: null, // Initial status
