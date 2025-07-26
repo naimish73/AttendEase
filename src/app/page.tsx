@@ -1,3 +1,9 @@
+import { AttendancePage } from '@/components/attendance-page';
+
 export default function Home() {
-  return <></>;
+  return (
+    <main>
+      <AttendancePage />
+    </main>
+  );
 }
