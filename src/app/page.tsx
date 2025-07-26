@@ -1,6 +1,6 @@
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { School, UserPlus, Users, ClipboardCheck } from 'lucide-react';
+import { School, UserPlus, Users, ClipboardCheck, Shuffle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -12,7 +12,7 @@ export default function Home() {
           AttendEase
         </h1>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-6xl">
         <Link href="/attendance" className="transform transition-transform hover:scale-105">
           <Card className="h-full shadow-lg hover:shadow-2xl cursor-pointer flex flex-col items-center text-center">
             <CardHeader>
@@ -54,6 +54,21 @@ export default function Home() {
                 <CardContent>
                     <CardDescription>
                         View the list of all students and remove them if needed.
+                    </CardDescription>
+                </CardContent>
+            </Card>
+        </Link>
+        <Link href="/team-shuffle" className="transform transition-transform hover:scale-105">
+            <Card className="h-full shadow-lg hover:shadow-2xl cursor-pointer flex flex-col items-center text-center">
+                <CardHeader>
+                    <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4">
+                        <Shuffle className="h-12 w-12 text-primary" />
+                    </div>
+                    <CardTitle className="text-2xl">Team Shuffle</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CardDescription>
+                        Shuffle present students into teams for sports.
                     </CardDescription>
                 </CardContent>
             </Card>
