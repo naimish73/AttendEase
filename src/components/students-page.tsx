@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
-import { Home, Trash2, Users } from "lucide-react";
+import { Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,7 +33,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, deleteDoc, query } from "firebase/firestore";
-import Link from "next/link";
 
 type Student = {
   id: string;
@@ -90,24 +89,11 @@ export const StudentsPage: FC = () => {
 
 
   return (
-    <div className="container mx-auto p-4 md:p-8 bg-background min-h-screen">
-      <header className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <Users className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold font-headline text-foreground">
-            Manage Students
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-            <Link href="/">
-                <Button variant="outline">
-                    <Home className="mr-2 h-4 w-4" />
-                    Back to Attendance
-                </Button>
-            </Link>
-        </div>
+    <div className="flex flex-col h-full">
+      <header className="flex items-center justify-between p-4 border-b">
+        <h1 className="text-2xl font-bold font-headline text-foreground">Manage Students</h1>
       </header>
-
+      <main className="flex-1 overflow-y-auto p-4">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>All Students</CardTitle>
@@ -178,6 +164,7 @@ export const StudentsPage: FC = () => {
           </div>
         </CardContent>
       </Card>
+      </main>
     </div>
   );
 };

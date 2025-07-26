@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
-import { ClipboardCheck, Download, Search, UserPlus, Users } from "lucide-react";
+import { ClipboardCheck, Download, Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,7 +42,6 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, addDoc, doc, updateDoc, query } from "firebase/firestore";
 import * as XLSX from 'xlsx';
-import Link from "next/link";
 
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
@@ -173,21 +172,10 @@ export const AttendancePage: FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8 bg-background min-h-screen">
-      <header className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <ClipboardCheck className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold font-headline text-foreground">
-            AttendEase
-          </h1>
-        </div>
+    <div className="flex flex-col h-full">
+      <header className="flex items-center justify-between p-4 border-b">
+        <h1 className="text-2xl font-bold font-headline text-foreground">Attendance</h1>
         <div className="flex items-center gap-2">
-          <Link href="/students">
-            <Button variant="outline">
-                <Users className="mr-2 h-4 w-4" />
-                Manage Students
-            </Button>
-          </Link>
           <Dialog open={isAddStudentOpen} onOpenChange={setAddStudentOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -252,7 +240,7 @@ export const AttendancePage: FC = () => {
           </Button>
         </div>
       </header>
-
+      <main className="flex-1 overflow-y-auto p-4">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Attendance List</CardTitle>
@@ -330,6 +318,7 @@ export const AttendancePage: FC = () => {
           </div>
         </CardContent>
       </Card>
+      </main>
     </div>
   );
 };
