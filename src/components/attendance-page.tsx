@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
-import { Download, Search, RotateCcw, UserCheck, UserClock } from "lucide-react";
+import { Download, Search, RotateCcw, UserCheck, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -284,7 +284,7 @@ export const AttendancePage: FC = () => {
             </div>
             <Separator orientation="vertical" className="h-8" />
             <div className="flex items-center gap-2">
-              <UserClock className="h-5 w-5 text-yellow-600" />
+              <Clock className="h-5 w-5 text-yellow-600" />
               <div>
                 <p className="font-bold text-lg">{lateCount}</p>
                 <p className="text-xs text-muted-foreground">Late</p>
@@ -354,3 +354,5 @@ export const AttendancePage: FC = () => {
     </Card>
   );
 };
+
+    
