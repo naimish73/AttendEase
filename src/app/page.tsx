@@ -1,6 +1,6 @@
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { School, UserPlus, Users, ClipboardCheck, Shuffle } from 'lucide-react';
+import { School, UserPlus, Users, ClipboardCheck, Shuffle, Database } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -12,7 +12,7 @@ export default function Home() {
           AttendEase
         </h1>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-8 w-full max-w-4xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">
         <Link href="/attendance" className="transform transition-transform hover:scale-105">
           <Card className="h-full shadow-lg hover:shadow-2xl cursor-pointer flex flex-col items-center text-center p-6">
             <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4">
@@ -69,6 +69,21 @@ export default function Home() {
                 <CardContent className="p-0">
                     <CardDescription>
                         Shuffle present students into teams for sports.
+                    </CardDescription>
+                </CardContent>
+            </Card>
+        </Link>
+        <Link href="/seed-database" className="transform transition-transform hover:scale-105 sm:col-span-2 lg:col-span-1">
+            <Card className="h-full shadow-lg hover:shadow-2xl cursor-pointer flex flex-col items-center text-center p-6 bg-secondary/50">
+                <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4">
+                    <Database className="h-12 w-12 text-primary" />
+                </div>
+                <CardHeader className="p-0 mb-2">
+                    <CardTitle className="text-2xl">Seed Database</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <CardDescription>
+                        (Dev Tool) Add 100 random students to the database.
                     </CardDescription>
                 </CardContent>
             </Card>
