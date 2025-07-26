@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
-import { ClipboardCheck, Download, Search, UserPlus } from "lucide-react";
+import { ClipboardCheck, Download, Search, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, addDoc, doc, updateDoc, query } from "firebase/firestore";
 import * as XLSX from 'xlsx';
+import Link from "next/link";
 
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
@@ -181,6 +182,12 @@ export const AttendancePage: FC = () => {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/students">
+            <Button variant="outline">
+                <Users className="mr-2 h-4 w-4" />
+                Manage Students
+            </Button>
+          </Link>
           <Dialog open={isAddStudentOpen} onOpenChange={setAddStudentOpen}>
             <DialogTrigger asChild>
               <Button>
