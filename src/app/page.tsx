@@ -1,26 +1,63 @@
 
-import { AttendancePage } from '@/components/attendance-page';
-import { AddStudentForm } from '@/components/add-student-form';
-import { StudentsPage } from '@/components/students-page';
-import { School } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { School, UserPlus, Users, ClipboardCheck } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   return (
-    <div className="flex flex-col items-center min-h-screen bg-background p-4 md:p-8">
-      <div className="flex items-center gap-4 mb-8">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 md:p-8">
+      <div className="flex items-center gap-4 mb-12">
         <School className="h-12 w-12 text-primary" />
-        <h1 className="text-4xl font-bold font-headline text-foreground">
+        <h1 className="text-5xl font-bold font-headline text-foreground">
           AttendEase
         </h1>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full max-w-7xl">
-        <div className="lg:col-span-2">
-            <AttendancePage />
-        </div>
-        <div className="flex flex-col gap-6">
-            <AddStudentForm />
-            <StudentsPage />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
+        <Link href="/attendance" className="transform transition-transform hover:scale-105">
+          <Card className="h-full shadow-lg hover:shadow-2xl cursor-pointer flex flex-col items-center text-center">
+            <CardHeader>
+              <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4">
+                <ClipboardCheck className="h-12 w-12 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Take Attendance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Mark student attendance as Present, Absent, or Late.
+              </CardDescription>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/add-student" className="transform transition-transform hover:scale-105">
+            <Card className="h-full shadow-lg hover:shadow-2xl cursor-pointer flex flex-col items-center text-center">
+                <CardHeader>
+                    <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4">
+                        <UserPlus className="h-12 w-12 text-primary" />
+                    </div>
+                    <CardTitle className="text-2xl">Add New Student</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CardDescription>
+                        Enroll a new student into the attendance system.
+                    </CardDescription>
+                </CardContent>
+            </Card>
+        </Link>
+        <Link href="/manage-students" className="transform transition-transform hover:scale-105">
+            <Card className="h-full shadow-lg hover:shadow-2xl cursor-pointer flex flex-col items-center text-center">
+                <CardHeader>
+                    <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4">
+                        <Users className="h-12 w-12 text-primary" />
+                    </div>
+                    <CardTitle className="text-2xl">Manage Students</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CardDescription>
+                        View the list of all students and remove them if needed.
+                    </CardDescription>
+                </CardContent>
+            </Card>
+        </Link>
       </div>
     </div>
   );

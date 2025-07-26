@@ -89,26 +89,28 @@ export const StudentsPage: FC = () => {
 
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg w-full">
       <CardHeader>
-        <CardTitle>Manage Students</CardTitle>
+        <CardTitle className="text-3xl">Manage Students</CardTitle>
         <CardDescription>
           View and manage all student records.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-md overflow-hidden max-h-64 overflow-y-auto">
+        <div className="border rounded-md overflow-hidden">
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Student Name</TableHead>
+                <TableHead>Class</TableHead>
+                <TableHead>Mobile No.</TableHead>
                 <TableHead className="text-right w-[90px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={2} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     Loading students...
                   </TableCell>
                 </TableRow>
@@ -116,6 +118,8 @@ export const StudentsPage: FC = () => {
                 students.map((student) => (
                   <TableRow key={student.id} className="hover:bg-muted/20">
                     <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell>{student.class}</TableCell>
+                    <TableCell>{student.mobile}</TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -144,7 +148,7 @@ export const StudentsPage: FC = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={2} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     No students found.
                   </TableCell>
                 </TableRow>

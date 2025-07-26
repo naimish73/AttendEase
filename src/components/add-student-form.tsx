@@ -66,16 +66,16 @@ export const AddStudentForm: FC = () => {
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg w-full">
       <CardHeader>
-        <CardTitle>Add New Student</CardTitle>
+        <CardTitle className="text-3xl">Add New Student</CardTitle>
         <CardDescription>
-          Enter the details to add a new student.
+          Enter the details below to enroll a new student.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="name"
@@ -115,7 +115,7 @@ export const AddStudentForm: FC = () => {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" size="lg">
               Add Student
             </Button>
           </form>
