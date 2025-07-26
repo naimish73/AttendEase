@@ -27,37 +27,37 @@ export const CameraCapture: FC<CameraCaptureProps> = ({ onCapture }) => {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    const getCameraPermission = async () => {
-      if (!isDialogOpen) return;
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+    const enableStream = async () => {
+      if (isDialogOpen) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          streamRef.current = stream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+          setHasCameraPermission(true);
+        } catch (error) {
+          console.error("Error accessing camera:", error);
+          setHasCameraPermission(false);
+          toast({
+            variant: "destructive",
+            title: "Camera Access Denied",
+            description: "Please enable camera permissions in your browser settings.",
+          });
         }
-        setHasCameraPermission(true);
-      } catch (error) {
-        console.error("Error accessing camera:", error);
-        setHasCameraPermission(false);
-        toast({
-          variant: "destructive",
-          title: "Camera Access Denied",
-          description:
-            "Please enable camera permissions in your browser settings.",
-        });
       }
     };
-    getCameraPermission();
+    enableStream();
 
+    // Cleanup function to stop the stream when the component unmounts or dialog closes
     return () => {
-      // Cleanup: stop video stream when dialog closes
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((track) => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
-    }
+    };
   }, [isDialogOpen, toast]);
 
   const handleCapture = () => {
@@ -69,7 +69,8 @@ export const CameraCapture: FC<CameraCaptureProps> = ({ onCapture }) => {
       const context = canvas.getContext("2d");
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setCapturedImage(canvas.toDataURL("image/png"));
+        const imageDataUrl = canvas.toDataURL("image/png");
+        setCapturedImage(imageDataUrl);
       }
     }
   };
@@ -81,8 +82,7 @@ export const CameraCapture: FC<CameraCaptureProps> = ({ onCapture }) => {
         title: "Photo Captured!",
         description: "The new profile photo has been set.",
       })
-      setIsDialogOpen(false);
-      setCapturedImage(null);
+      handleOpenChange(false);
     }
   };
 
@@ -93,8 +93,13 @@ export const CameraCapture: FC<CameraCaptureProps> = ({ onCapture }) => {
   const handleOpenChange = (open: boolean) => {
     setIsDialogOpen(open);
     if (!open) {
+      // Reset states when dialog is closed
       setCapturedImage(null);
       setHasCameraPermission(null);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
     }
   }
 
@@ -120,15 +125,19 @@ export const CameraCapture: FC<CameraCaptureProps> = ({ onCapture }) => {
             </Alert>
         )}
         
-        {hasCameraPermission === true && (
-            <div className="relative">
-                {capturedImage ? (
-                    <img src={capturedImage} alt="Captured" className="w-full h-auto rounded-md" />
-                ) : (
-                    <video ref={videoRef} className="w-full aspect-video rounded-md" autoPlay muted playsInline />
-                )}
-            </div>
-        )}
+        <div className="relative">
+            {capturedImage ? (
+                <img src={capturedImage} alt="Captured" className="w-full h-auto rounded-md" />
+            ) : (
+                <video 
+                    ref={videoRef} 
+                    className="w-full aspect-video rounded-md bg-muted" 
+                    autoPlay 
+                    muted 
+                    playsInline 
+                />
+            )}
+        </div>
 
         <canvas ref={canvasRef} className="hidden" />
 
