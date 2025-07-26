@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
-import { Download, Search, RotateCcw, UserCheck, Clock, Camera } from "lucide-react";
+import { Download, Search, RotateCcw, UserCheck, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
@@ -47,8 +47,6 @@ import { collection, onSnapshot, doc, updateDoc, query, writeBatch } from "fireb
 import * as XLSX from 'xlsx';
 import { Separator } from "./ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { CameraCapture } from "./camera-capture";
-import { recognizeStudents } from "@/ai/flows/recognize-students-flow";
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -65,9 +63,7 @@ export const AttendancePage: FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [isScanning, setIsScanning] = useState(false);
   const [exportFileName, setExportFileName] = useState("");
-  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
 
   useEffect(() => {
     const studentsCollection = collection(db, "students");
@@ -179,66 +175,6 @@ export const AttendancePage: FC = () => {
     setExportFileName(""); // Reset for next time
   };
 
-  const handleAiScan = async (imageDataUrl: string) => {
-    setIsCameraDialogOpen(false);
-    setIsScanning(true);
-    toast({
-        title: "AI Scan in Progress",
-        description: "Please wait while the AI recognizes students...",
-    });
-
-    try {
-        const studentsWithPhotos = students.filter(s => s.imageUrl && !s.imageUrl.includes('placehold.co')).map(s => ({
-            id: s.id,
-            imageUrl: s.imageUrl!,
-        }));
-        
-        if (studentsWithPhotos.length === 0) {
-          toast({
-              title: "No Student Photos",
-              description: "Cannot run AI scan without student profile photos.",
-              variant: "destructive",
-          });
-          setIsScanning(false);
-          return;
-        }
-
-        const result = await recognizeStudents({
-            photoDataUri: imageDataUrl,
-            students: studentsWithPhotos,
-        });
-
-        const presentIds = result.presentStudentIds;
-
-        if (presentIds.length === 0) {
-            toast({
-                title: "AI Scan Complete",
-                description: "No students were recognized in the photo.",
-            });
-        } else {
-            const batch = writeBatch(db);
-            presentIds.forEach(studentId => {
-                const studentRef = doc(db, "students", studentId);
-                batch.update(studentRef, { status: "Present" });
-            });
-            await batch.commit();
-            toast({
-                title: "AI Scan Successful",
-                description: `${presentIds.length} student(s) have been marked as Present.`,
-            });
-        }
-    } catch (error) {
-        console.error("AI Scan Error: ", error);
-        toast({
-            title: "AI Scan Failed",
-            description: "An error occurred during the AI scan. Please try again.",
-            variant: "destructive",
-        });
-    } finally {
-        setIsScanning(false);
-    }
-  }
-
   const filteredStudents = useMemo(
     () =>
       students.filter((student) => {
@@ -270,23 +206,6 @@ export const AttendancePage: FC = () => {
                 </CardDescription>
             </div>
             <div className="flex gap-2">
-                <Dialog open={isCameraDialogOpen} onOpenChange={setIsCameraDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" disabled={isScanning}>
-                            <Camera className="mr-2 h-4 w-4" />
-                            {isScanning ? 'Scanning...' : 'Scan with AI'}
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>AI Attendance Scan</DialogTitle>
-                            <DialogDescription>
-                                Capture a photo of the classroom. The AI will detect students and mark them as present.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <CameraCapture onCapture={handleAiScan} />
-                    </DialogContent>
-                </Dialog>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button variant="outline">
