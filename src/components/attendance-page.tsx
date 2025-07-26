@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
-import { ClipboardCheck, Download, Search, UserPlus } from "lucide-react";
+import { Download, Search, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,17 +11,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -40,8 +30,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, addDoc, doc, updateDoc, query } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, query } from "firebase/firestore";
 import * as XLSX from 'xlsx';
+import Link from 'next/link';
 
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
@@ -56,10 +47,6 @@ type Student = {
 export const AttendancePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddStudentOpen, setAddStudentOpen] = useState(false);
-  const [newStudentName, setNewStudentName] = useState("");
-  const [newStudentClass, setNewStudentClass] = useState("");
-  const [newStudentMobile, setNewStudentMobile] = useState("");
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
 
@@ -95,40 +82,6 @@ export const AttendancePage: FC = () => {
         toast({
             title: "Error",
             description: "Failed to update student status.",
-            variant: "destructive"
-        })
-    }
-  };
-
-  const handleAddStudent = async () => {
-    if (newStudentName.trim() === "" || newStudentClass.trim() === "" || newStudentMobile.trim() === "") {
-        toast({
-            title: "Error",
-            description: "All student fields are required.",
-            variant: "destructive"
-        })
-        return;
-    }
-    try {
-        const newStudent = {
-            name: newStudentName,
-            class: newStudentClass,
-            mobile: newStudentMobile,
-            status: null,
-        };
-        await addDoc(collection(db, "students"), newStudent);
-        setNewStudentName("");
-        setNewStudentClass("");
-        setNewStudentMobile("");
-        setAddStudentOpen(false);
-        toast({
-            title: "Success",
-            description: "Student added successfully.",
-        })
-    } catch (error) {
-        toast({
-            title: "Error",
-            description: "Failed to add student.",
             variant: "destructive"
         })
     }
@@ -172,72 +125,20 @@ export const AttendancePage: FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-screen bg-background">
       <header className="flex items-center justify-between p-4 border-b">
         <h1 className="text-2xl font-bold font-headline text-foreground">Attendance</h1>
         <div className="flex items-center gap-2">
-          <Dialog open={isAddStudentOpen} onOpenChange={setAddStudentOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Student
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Add New Student</DialogTitle>
-                <DialogDescription>
-                  Enter the details of the new student to add them to the attendance list.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Name
-                  </Label>
-                  <Input
-                    id="name"
-                    value={newStudentName}
-                    onChange={(e) => setNewStudentName(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g. Jane Doe"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="class" className="text-right">
-                    Class
-                  </Label>
-                  <Input
-                    id="class"
-                    value={newStudentClass}
-                    onChange={(e) => setNewStudentClass(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g. 10A"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="mobile" className="text-right">
-                    Mobile No.
-                  </Label>
-                  <Input
-                    id="mobile"
-                    value={newStudentMobile}
-                    onChange={(e) => setNewStudentMobile(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g. 123-456-7890"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" onClick={handleAddStudent}>Save Student</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            Export XLS
-          </Button>
+            <Link href="/" passHref>
+                <Button variant="outline">
+                    <Home className="mr-2 h-4 w-4" />
+                    Back to Home
+                </Button>
+            </Link>
+            <Button variant="outline" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export XLS
+            </Button>
         </div>
       </header>
       <main className="flex-1 overflow-y-auto p-4">

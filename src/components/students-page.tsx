@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useMemo, type FC, useEffect } from "react";
-import { Trash2, Users } from "lucide-react";
+import { useState, type FC, useEffect } from "react";
+import { Trash2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,6 +33,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, deleteDoc, query } from "firebase/firestore";
+import Link from 'next/link';
 
 type Student = {
   id: string;
@@ -89,9 +90,15 @@ export const StudentsPage: FC = () => {
 
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-screen bg-background">
       <header className="flex items-center justify-between p-4 border-b">
         <h1 className="text-2xl font-bold font-headline text-foreground">Manage Students</h1>
+        <Link href="/" passHref>
+            <Button variant="outline">
+                <Home className="mr-2 h-4 w-4" />
+                Back to Home
+            </Button>
+        </Link>
       </header>
       <main className="flex-1 overflow-y-auto p-4">
       <Card className="shadow-lg">
