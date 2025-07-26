@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, type FC } from "react";
+import { useState, useMemo, type FC, useEffect } from "react";
 import { ClipboardCheck, Download, Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, addDoc, doc, updateDoc, query } from "firebase/firestore";
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -46,31 +48,58 @@ type Student = {
   status: AttendanceStatus | null;
 };
 
-const initialStudents: Student[] = [
-    { id: '1', name: 'Aarav Sharma', status: 'Present' },
-    { id: '2', name: 'Vivaan Singh', status: 'Absent' },
-    { id: '3', name: 'Aditya Kumar', status: null },
-    { id: '4', name: 'Diya Patel', status: 'Late' },
-    { id: '5', name: 'Ishaan Gupta', status: 'Present' },
-    { id: '6', name: 'Saanvi Reddy', status: null },
-];
-
 export const AttendancePage: FC = () => {
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddStudentOpen, setAddStudentOpen] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
 
-  const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
-    setStudents(
-      students.map((student) =>
-        student.id === studentId ? { ...student, status } : student
-      )
-    );
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const studentsCollection = collection(db, "students");
+      const studentsSnapshot = await getDocs(query(studentsCollection));
+      const studentsList = studentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Student[];
+      setStudents(studentsList);
+    } catch (error) {
+      toast({
+        title: "Error fetching students",
+        description: "Could not retrieve student data from Firestore.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddStudent = () => {
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const handleStatusChange = async (studentId: string, status: AttendanceStatus) => {
+    try {
+        const studentRef = doc(db, "students", studentId);
+        await updateDoc(studentRef, { status });
+        setStudents(
+            students.map((student) =>
+                student.id === studentId ? { ...student, status } : student
+            )
+        );
+    } catch (error) {
+        toast({
+            title: "Error",
+            description: "Failed to update student status.",
+            variant: "destructive"
+        })
+    }
+  };
+
+  const handleAddStudent = async () => {
     if (newStudentName.trim() === "") {
         toast({
             title: "Error",
@@ -79,18 +108,26 @@ export const AttendancePage: FC = () => {
         })
         return;
     }
-    const newStudent: Student = {
-      id: (students.length + 1).toString(),
-      name: newStudentName,
-      status: null,
-    };
-    setStudents([...students, newStudent]);
-    setNewStudentName("");
-    setAddStudentOpen(false);
-    toast({
-        title: "Student Added",
-        description: `${newStudentName} has been successfully added.`,
-    })
+    try {
+        const newStudent = {
+            name: newStudentName,
+            status: null,
+        };
+        const docRef = await addDoc(collection(db, "students"), newStudent);
+        setStudents([...students, { id: docRef.id, ...newStudent }]);
+        setNewStudentName("");
+        setAddStudentOpen(false);
+        toast({
+            title: "Student Added",
+            description: `${newStudentName} has been successfully added.`,
+        })
+    } catch (error) {
+        toast({
+            title: "Error",
+            description: "Failed to add student.",
+            variant: "destructive"
+        })
+    }
   };
 
   const handleExport = () => {
@@ -208,7 +245,13 @@ export const AttendancePage: FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStudents.length > 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                      Loading students...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredStudents.length > 0 ? (
                   filteredStudents.map((student) => (
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">{student.name}</TableCell>
@@ -239,7 +282,7 @@ export const AttendancePage: FC = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={3} className="h-24 text-center">
-                      No students found.
+                      No students found. Add a student to get started.
                     </TableCell>
                   </TableRow>
                 )}

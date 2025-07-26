@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   projectId: 'attendease-se76v',
@@ -11,5 +12,6 @@ const firebaseConfig = {
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
 
-export { firebaseApp };
+export { firebaseApp, db };
