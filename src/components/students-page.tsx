@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, deleteDoc, query } from "firebase/firestore";
+import { collection, onSnapshot, doc, deleteDoc, query, writeBatch, getDocs } from "firebase/firestore";
 
 type Student = {
   id: string;
@@ -97,14 +97,69 @@ export const StudentsPage: FC = () => {
     }
   };
 
+  const handleDeleteAllStudents = async () => {
+    if (students.length === 0) {
+      toast({
+        title: "No Students",
+        description: "There are no students to delete.",
+      });
+      return;
+    }
+    try {
+      const studentsCollection = collection(db, "students");
+      const querySnapshot = await getDocs(studentsCollection);
+      const batch = writeBatch(db);
+      querySnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      toast({
+        title: "Success",
+        description: "All students have been deleted successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete all students.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Card className="shadow-lg w-full">
       <CardHeader>
-        <CardTitle className="text-3xl">Manage Students</CardTitle>
-        <CardDescription>
-          View and manage all student records.
-        </CardDescription>
+        <div className="flex items-center justify-between">
+            <div>
+                <CardTitle className="text-3xl">Manage Students</CardTitle>
+                <CardDescription>
+                View and manage all student records.
+                </CardDescription>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete All
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete all students
+                    and remove their data from our servers.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAllStudents}>
+                    Continue
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="border rounded-md overflow-hidden">
