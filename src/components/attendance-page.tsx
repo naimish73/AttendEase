@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect } from "react";
-import { Download, Search, Home } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,8 +32,6 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query } from "firebase/firestore";
 import * as XLSX from 'xlsx';
-import Link from 'next/link';
-
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -125,101 +123,88 @@ export const AttendancePage: FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background">
-      <header className="flex items-center justify-between p-4 border-b">
-        <h1 className="text-2xl font-bold font-headline text-foreground">Attendance</h1>
-        <div className="flex items-center gap-2">
-            <Link href="/" passHref>
-                <Button variant="outline">
-                    <Home className="mr-2 h-4 w-4" />
-                    Back to Home
-                </Button>
-            </Link>
+    <Card className="shadow-lg h-full">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+            <div className="flex flex-col space-y-1.5">
+                <CardTitle>Attendance List</CardTitle>
+                <CardDescription>
+                Mark and view student attendance.
+                </CardDescription>
+            </div>
             <Button variant="outline" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
                 Export XLS
             </Button>
         </div>
-      </header>
-      <main className="flex-1 overflow-y-auto p-4">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Attendance List</CardTitle>
-          <CardDescription>
-            Mark and view student attendance. Use the search bar to filter students.
-          </CardDescription>
-          <div className="relative pt-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by student name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full md:w-1/3"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-md overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/50">
+        <div className="relative pt-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by student name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="border rounded-md overflow-hidden">
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow>
+                <TableHead>Student Name</TableHead>
+                <TableHead>Class</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right w-[160px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
                 <TableRow>
-                  <TableHead className="w-[200px]">Student Name</TableHead>
-                  <TableHead>Class</TableHead>
-                  <TableHead>Mobile No.</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right w-[160px]">Actions</TableHead>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    Loading students...
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      Loading students...
+              ) : filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => (
+                  <TableRow key={student.id} className="hover:bg-muted/20">
+                    <TableCell className="font-medium">{student.name}</TableCell>
+                    <TableCell>{student.class}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusBadgeVariant(student.status)} className="capitalize">
+                          {student.status || 'Unmarked'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Select
+                        value={student.status ?? ""}
+                        onValueChange={(value: AttendanceStatus) =>
+                          handleStatusChange(student.id, value)
+                        }
+                      >
+                        <SelectTrigger className="w-[140px] ml-auto">
+                          <SelectValue placeholder="Set Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Present">Present</SelectItem>
+                          <SelectItem value="Absent">Absent</SelectItem>
+                          <SelectItem value="Late">Late</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                   </TableRow>
-                ) : filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
-                    <TableRow key={student.id} className="hover:bg-muted/20">
-                      <TableCell className="font-medium">{student.name}</TableCell>
-                      <TableCell>{student.class}</TableCell>
-                      <TableCell>{student.mobile}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(student.status)} className="capitalize">
-                            {student.status || 'Unmarked'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Select
-                          value={student.status ?? ""}
-                          onValueChange={(value: AttendanceStatus) =>
-                            handleStatusChange(student.id, value)
-                          }
-                        >
-                          <SelectTrigger className="w-[140px] ml-auto">
-                            <SelectValue placeholder="Set Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Present">Present</SelectItem>
-                            <SelectItem value="Absent">Absent</SelectItem>
-                            <SelectItem value="Late">Late</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      No students found. Add a student to get started.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-      </main>
-    </div>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    No students found. Add a student to get started.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
