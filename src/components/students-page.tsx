@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, type FC, useEffect } from "react";
-import { Trash2, Pencil } from "lucide-react";
+import { useState, type FC, useEffect, useMemo } from "react";
+import { Trash2, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -36,6 +36,7 @@ import { collection, onSnapshot, doc, deleteDoc, query, getDocs, writeBatch } fr
 import { ref, deleteObject } from "firebase/storage";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
+import { Input } from "./ui/input";
 
 type Student = {
   id: string;
@@ -49,6 +50,7 @@ export const StudentsPage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const studentsCollection = collection(db, "students");
@@ -152,14 +154,27 @@ export const StudentsPage: FC = () => {
     }
   };
 
+  const filteredStudents = useMemo(
+    () =>
+      students.filter((student) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          student.name.toLowerCase().includes(term) ||
+          student.class.toLowerCase().includes(term) ||
+          (student.mobile && student.mobile.toLowerCase().includes(term))
+        );
+      }),
+    [students, searchTerm]
+  );
+
   return (
     <Card className="shadow-lg w-full">
       <CardHeader>
-        <div className="flex items-center justify-between">
-            <div>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex-1">
                 <CardTitle className="text-3xl">Manage Students</CardTitle>
                 <CardDescription>
-                View and manage all student records.
+                View, edit, or delete student records.
                 </CardDescription>
             </div>
             <AlertDialog>
@@ -186,6 +201,15 @@ export const StudentsPage: FC = () => {
               </AlertDialogContent>
             </AlertDialog>
         </div>
+        <div className="relative mt-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, class, or mobile..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-full md:w-1/2 lg:w-1/3"
+            />
+          </div>
       </CardHeader>
       <CardContent>
         <div className="border rounded-md overflow-hidden">
@@ -205,8 +229,8 @@ export const StudentsPage: FC = () => {
                     Loading students...
                   </TableCell>
                 </TableRow>
-              ) : students.length > 0 ? (
-                students.map((student) => (
+              ) : filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => (
                   <TableRow key={student.id} className="hover:bg-muted/20">
                     <TableCell className="font-medium flex items-center gap-3">
                       <Avatar>
