@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, type FC, useEffect } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,6 +35,7 @@ import { db, storage } from "@/lib/firebase";
 import { collection, onSnapshot, doc, deleteDoc, query, getDocs, writeBatch } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import Link from "next/link";
 
 type Student = {
   id: string;
@@ -194,7 +195,7 @@ export const StudentsPage: FC = () => {
                 <TableHead>Student Name</TableHead>
                 <TableHead>Class</TableHead>
                 <TableHead>Mobile No.</TableHead>
-                <TableHead className="text-right w-[90px]">Actions</TableHead>
+                <TableHead className="text-right w-[140px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -216,7 +217,12 @@ export const StudentsPage: FC = () => {
                     </TableCell>
                     <TableCell>{student.class}</TableCell>
                     <TableCell>{student.mobile}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
+                      <Button asChild variant="outline" size="icon">
+                        <Link href={`/edit-student/${student.id}`}>
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" size="icon">
