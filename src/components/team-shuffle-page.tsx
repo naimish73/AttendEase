@@ -10,18 +10,13 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query } from "firebase/firestore";
-import { RotateCcw, User } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Label } from "./ui/label";
 
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
@@ -38,7 +33,7 @@ export const TeamShufflePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const [numberOfTeams, setNumberOfTeams] = useState<number>(2);
+  const [teamSize, setTeamSize] = useState<number>(2);
   const [shuffledTeams, setShuffledTeams] = useState<Student[][]>([]);
 
   useEffect(() => {
@@ -78,27 +73,37 @@ export const TeamShufflePage: FC = () => {
       });
       return;
     }
+    
+    if (teamSize <= 1) {
+        toast({
+            title: "Invalid Team Size",
+            description: "Team size must be greater than 1.",
+            variant: "destructive",
+        });
+        return;
+    }
 
-    if (availableStudents.length < numberOfTeams) {
+    if (availableStudents.length < teamSize) {
         toast({
             title: "Not Enough Students",
-            description: "There are not enough students to form the selected number of teams.",
+            description: `Not enough students to form a single team of size ${teamSize}.`,
             variant: "destructive",
         });
         return;
     }
 
     const shuffled = [...availableStudents].sort(() => Math.random() - 0.5);
-    const teams: Student[][] = Array.from({ length: numberOfTeams }, () => []);
-    
-    shuffled.forEach((student, index) => {
-      teams[index % numberOfTeams].push(student);
-    });
+    const teams: Student[][] = [];
+    const numTeams = Math.ceil(shuffled.length / teamSize);
+
+    for (let i = 0; i < shuffled.length; i += teamSize) {
+        teams.push(shuffled.slice(i, i + teamSize));
+    }
 
     setShuffledTeams(teams);
      toast({
         title: "Teams Shuffled!",
-        description: `${availableStudents.length} students have been shuffled into ${numberOfTeams} teams.`,
+        description: `${availableStudents.length} students have been shuffled into ${teams.length} teams.`,
       });
   };
 
@@ -115,7 +120,7 @@ export const TeamShufflePage: FC = () => {
       <CardHeader>
         <CardTitle>Team Shuffle</CardTitle>
         <CardDescription>
-          Shuffle present and late students into teams for an activity.
+          Shuffle present and late students into teams of a specific size.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -125,28 +130,29 @@ export const TeamShufflePage: FC = () => {
                 <p className="text-2xl font-bold text-primary">{availableStudents.length}</p>
                 <p className="text-xs text-muted-foreground">Only students marked 'Present' or 'Late' can be shuffled.</p>
            </div>
-           <div className="flex items-center gap-4">
-            <Select onValueChange={(value) => setNumberOfTeams(Number(value))} defaultValue="2">
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select number of teams" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(9)].map((_, i) => (
-                  <SelectItem key={i + 2} value={(i + 2).toString()}>
-                    {i + 2} Teams
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleShuffle} disabled={loading}>
-                {loading ? 'Loading...' : 'Shuffle Teams'}
-            </Button>
-            {shuffledTeams.length > 0 && (
-                <Button variant="outline" onClick={handleReset}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Reset
+           <div className="flex items-end gap-4">
+                <div>
+                    <Label htmlFor="team-size" className="text-sm font-medium">Team Size</Label>
+                    <Input 
+                        id="team-size"
+                        type="number"
+                        value={teamSize}
+                        onChange={(e) => setTeamSize(parseInt(e.target.value, 10) || 2)}
+                        className="w-[120px]"
+                        min="2"
+                    />
+                </div>
+
+                <Button onClick={handleShuffle} disabled={loading}>
+                    {loading ? 'Loading...' : 'Shuffle Teams'}
                 </Button>
-            )}
+
+                {shuffledTeams.length > 0 && (
+                    <Button variant="outline" onClick={handleReset}>
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Reset
+                    </Button>
+                )}
            </div>
         </div>
 
