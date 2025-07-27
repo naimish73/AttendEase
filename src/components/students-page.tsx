@@ -31,8 +31,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { collection, onSnapshot, doc, deleteDoc, query, getDocs, writeBatch } from "firebase/firestore";
+import { ref, deleteObject } from "firebase/storage";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 type Student = {
@@ -82,15 +83,22 @@ export const StudentsPage: FC = () => {
     return () => unsubscribe();
   }, [toast]);
 
-  const handleDeleteStudent = async (studentId: string) => {
+  const handleDeleteStudent = async (studentId: string, imageUrl?: string) => {
     try {
         const studentRef = doc(db, "students", studentId);
         await deleteDoc(studentRef);
+
+        if (imageUrl && !imageUrl.includes('placehold.co')) {
+            const imageRef = ref(storage, imageUrl);
+            await deleteObject(imageRef);
+        }
+
         toast({
             title: "Success",
             description: "Student deleted successfully.",
         })
     } catch (error) {
+        console.error("Error deleting student: ", error);
         toast({
             title: "Error",
             description: "Failed to delete student.",
@@ -100,34 +108,44 @@ export const StudentsPage: FC = () => {
   };
 
   const handleDeleteAllStudents = async () => {
+    if (students.length === 0) {
+      toast({
+        title: "No students to delete",
+        description: "The student list is already empty.",
+      });
+      return;
+    }
     try {
       const studentsCollection = collection(db, "students");
       const querySnapshot = await getDocs(studentsCollection);
       
-      if (querySnapshot.empty) {
-        toast({
-          title: "No students to delete",
-          description: "The student list is already empty.",
-        });
-        return;
-      }
-
       const batch = writeBatch(db);
+      const deletePromises: Promise<void>[] = [];
+
       querySnapshot.docs.forEach((doc) => {
         batch.delete(doc.ref);
+        const studentData = doc.data() as Student;
+        if (studentData.imageUrl && !studentData.imageUrl.includes('placehold.co')) {
+            const imageRef = ref(storage, studentData.imageUrl);
+            deletePromises.push(deleteObject(imageRef).catch(err => {
+              // Log error if a single image fails to delete, but don't block the whole process
+              console.error(`Failed to delete image for ${studentData.name}: ${studentData.imageUrl}`, err);
+            }));
+        }
       });
 
       await batch.commit();
+      await Promise.all(deletePromises);
 
       toast({
         title: "Success",
-        description: "All students have been deleted successfully.",
+        description: "All students and their photos have been deleted successfully.",
       });
     } catch (error) {
       console.error("Error deleting all students: ", error);
       toast({
         title: "Error",
-        description: "Failed to delete all students.",
+        description: "Failed to delete all students. Some data might still exist.",
         variant: "destructive"
       });
     }
@@ -155,7 +173,7 @@ export const StudentsPage: FC = () => {
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This action cannot be undone. This will permanently delete ALL students
-                    and remove their data from our servers.
+                    and their profile photos from the servers.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -215,7 +233,7 @@ export const StudentsPage: FC = () => {
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteStudent(student.id)}>
+                            <AlertDialogAction onClick={() => handleDeleteStudent(student.id, student.imageUrl)}>
                               Continue
                             </AlertDialogAction>
                           </AlertDialogFooter>
