@@ -52,6 +52,8 @@ export const AddStudentForm: FC = () => {
     },
   });
 
+  const studentName = form.watch("name");
+
   const onSubmit = async (data: StudentFormValues) => {
     setIsSubmitting(true);
     try {
@@ -157,8 +159,8 @@ export const AddStudentForm: FC = () => {
                 <div className="flex items-center gap-4">
                     <Avatar className="h-24 w-24">
                         <AvatarImage src={imageDataUrl ?? undefined} data-ai-hint="person" />
-                        <AvatarFallback className="bg-muted">
-                            <User className="h-12 w-12 text-muted-foreground" />
+                        <AvatarFallback className="bg-muted text-2xl font-bold">
+                            {studentName ? studentName.charAt(0).toUpperCase() : <User className="h-12 w-12 text-muted-foreground" />}
                         </AvatarFallback>
                     </Avatar>
                     <CameraCapture onCapture={setImageDataUrl} />

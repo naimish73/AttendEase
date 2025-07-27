@@ -62,6 +62,8 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
     },
   });
 
+  const studentName = form.watch("name");
+
   useEffect(() => {
     const fetchStudentData = async () => {
         try {
@@ -231,8 +233,8 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
                 <div className="flex items-center gap-4">
                     <Avatar className="h-24 w-24">
                         <AvatarImage src={imageDataUrl ?? existingImageUrl ?? undefined} data-ai-hint="person" />
-                        <AvatarFallback className="bg-muted">
-                            <User className="h-12 w-12 text-muted-foreground" />
+                        <AvatarFallback className="bg-muted text-2xl font-bold">
+                            {studentName ? studentName.charAt(0).toUpperCase() : <User className="h-12 w-12 text-muted-foreground" />}
                         </AvatarFallback>
                     </Avatar>
                     <CameraCapture onCapture={setImageDataUrl} />

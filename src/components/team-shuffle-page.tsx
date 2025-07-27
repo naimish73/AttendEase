@@ -170,7 +170,7 @@ export const TeamShufflePage: FC = () => {
                             <li key={student.id} className="flex items-center gap-3">
                                 <Avatar>
                                     <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
-                                    <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback>{student.name.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <span className="font-medium">{student.name}</span>
                                 <span className="text-sm text-muted-foreground ml-auto">{student.class}</span>

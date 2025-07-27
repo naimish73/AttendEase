@@ -319,7 +319,7 @@ export const AttendancePage: FC = () => {
                     <TableCell className="font-medium flex items-center gap-3">
                         <Avatar>
                             <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
-                            <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                            <AvatarFallback>{student.name.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         {student.name}
                     </TableCell>
