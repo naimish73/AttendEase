@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, doc, writeBatch, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, doc, writeBatch } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Crown, Medal, Award, RotateCcw } from "lucide-react";
 
@@ -45,6 +45,11 @@ type Student = {
   imageUrl?: string;
   quizPoints?: number;
 };
+
+type StudentWithPoints = Student & {
+    attendancePoints: number;
+    totalPoints: number;
+}
 
 export const PointsTablePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -83,7 +88,7 @@ export const PointsTablePage: FC = () => {
     return students.filter(s => s.status === 'Present' || s.status === 'Late');
   }, [students]);
 
-  const studentPoints = useMemo(() => {
+  const studentPoints: StudentWithPoints[] = useMemo(() => {
     return students.map(student => {
       let attendancePoints = 0;
       if (student.status === 'Present' || student.status === 'Late') {
