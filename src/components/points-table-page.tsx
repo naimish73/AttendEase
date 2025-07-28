@@ -222,7 +222,8 @@ export const PointsTablePage: FC = () => {
     let fileNameSuffix;
 
     if (activeTab === 'overall') {
-        dataToExport = overallStudentPoints.map(s => ({
+        dataToExport = overallStudentPoints.map((s, index) => ({
+            'Sr. No.': index + 1,
             Name: s.name,
             Class: s.class,
             'Attendance Points': s.attendancePoints,
@@ -231,7 +232,8 @@ export const PointsTablePage: FC = () => {
         }));
         fileNameSuffix = 'overall';
     } else {
-        dataToExport = dailyStudentPoints.map(s => ({
+        dataToExport = dailyStudentPoints.map((s, index) => ({
+            'Sr. No.': index + 1,
             Name: s.name,
             Class: s.class,
             'Points for the Day': s.totalPoints,
@@ -410,6 +412,8 @@ export const PointsTablePage: FC = () => {
     </Card>
   );
 };
+
+    
 
     
 
