@@ -23,7 +23,7 @@ import { Calendar } from "./ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-type AttendanceStatus = "Present" | "Absent" | "Late";
+type AttendanceStatus = "Present" | "Late";
 type Student = {
   id: string;
   name: string;
@@ -164,11 +164,11 @@ export const AttendancePage: FC = () => {
     const getStatusAbbreviation = (status: AttendanceStatus | null) => {
         if (status === 'Present') return 'P';
         if (status === 'Late') return 'L';
-        return 'A'; // Default to Absent for 'Absent' or 'Unmarked'
+        return 'A'; // Default to Absent
     }
 
-    const worksheetData = studentsWithStatus.map(s => ({
-      ID: s.id,
+    const worksheetData = studentsWithStatus.map((s, index) => ({
+      'Sr. No.': index + 1,
       Name: s.name,
       Class: s.class,
       "Mobile No.": s.mobile || '',
