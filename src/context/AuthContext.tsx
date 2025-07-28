@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
+    // This check runs only on the client-side
     const token = localStorage.getItem('auth_token');
     if (token) {
       setIsAuthenticated(true);
@@ -27,9 +28,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setLoading(false);
   }, []);
-
+  
   useEffect(() => {
-    if (!loading && !isAuthenticated && pathname !== '/login') {
+    if (typeof window !== 'undefined' && !loading && !isAuthenticated && pathname !== '/login') {
       router.push('/login');
     }
   }, [isAuthenticated, loading, pathname, router]);
@@ -47,9 +48,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+          <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
-      {loading ? <div>Loading...</div> : children}
+      {children}
     </AuthContext.Provider>
   );
 };

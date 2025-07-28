@@ -25,7 +25,6 @@ export default function Home() {
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
   };
 
   return (
