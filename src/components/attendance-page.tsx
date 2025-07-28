@@ -14,7 +14,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, setDoc, getDoc, query, writeBatch } from "firebase/firestore";
+import { collection, onSnapshot, doc, setDoc, query } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { Separator } from "./ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -30,7 +30,6 @@ type Student = {
   class: string;
   mobile: string;
   imageUrl?: string;
-  // This status is now per-day, fetched separately
   status?: AttendanceStatus | null;
 };
 
@@ -38,12 +37,78 @@ type DailyAttendance = {
     [studentId: string]: AttendanceStatus;
 }
 
+interface ExportDialogProps {
+  students: Student[];
+  date: Date;
+}
+
+const ExportDialog: FC<ExportDialogProps> = ({ students, date }) => {
+    const [fileName, setFileName] = useState("");
+    const { toast } = useToast();
+    const dateId = format(date, "yyyy-MM-dd");
+
+    const handleExport = () => {
+        if (!fileName.trim()) {
+            toast({ title: "Error", description: "Please enter a valid file name.", variant: "destructive" });
+            return;
+        }
+
+        const getStatusAbbreviation = (status: AttendanceStatus | null | undefined) => {
+            if (status === 'Present') return 'P';
+            if (status === 'Late') return 'L';
+            return 'A';
+        }
+
+        const worksheetData = students.map((s, index) => ({
+          'Sr. No.': index + 1,
+          Name: s.name,
+          Class: s.class,
+          "Mobile No.": s.mobile || '',
+          Status: getStatusAbbreviation(s.status)
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+        XLSX.writeFile(workbook, `${fileName.trim()}-${dateId}.xlsx`);
+        toast({
+            title: "Export Successful",
+            description: `Attendance report "${fileName.trim()}-${dateId}.xlsx" has been downloaded.`,
+        });
+        setFileName("");
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline"><Download className="mr-2 h-4 w-4" />Export XLS</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Export Attendance for {format(date, "PPP")}</DialogTitle>
+                    <DialogDescription>Please enter a name for the export file.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="fileName" className="text-right">File Name</Label>
+                        <Input id="fileName" value={fileName} onChange={(e) => setFileName(e.target.value)} placeholder="e.g., Attendance-Report" className="col-span-3"/>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                    <DialogClose asChild><Button onClick={handleExport}>Download</Button></DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+
 export const AttendancePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [exportFileName, setExportFileName] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dailyStatus, setDailyStatus] = useState<DailyAttendance>({});
 
@@ -155,37 +220,6 @@ export const AttendancePage: FC = () => {
     }
   };
 
-  const handleExport = () => {
-    if (!exportFileName.trim()) {
-        toast({ title: "Error", description: "Please enter a valid file name.", variant: "destructive" });
-        return;
-    }
-
-    const getStatusAbbreviation = (status: AttendanceStatus | null) => {
-        if (status === 'Present') return 'P';
-        if (status === 'Late') return 'L';
-        return 'A'; // Default to Absent
-    }
-
-    const worksheetData = studentsWithStatus.map((s, index) => ({
-      'Sr. No.': index + 1,
-      Name: s.name,
-      Class: s.class,
-      "Mobile No.": s.mobile || '',
-      Status: getStatusAbbreviation(s.status)
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
-    XLSX.writeFile(workbook, `${exportFileName.trim()}-${dateId}.xlsx`);
-    toast({
-        title: "Export Successful",
-        description: `Attendance report "${exportFileName.trim()}-${dateId}.xlsx" has been downloaded.`,
-    });
-    setExportFileName("");
-  };
-
   const filteredStudents = useMemo(
     () =>
       studentsWithStatus.filter((student) => {
@@ -231,27 +265,7 @@ export const AttendancePage: FC = () => {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="outline"><Download className="mr-2 h-4 w-4" />Export XLS</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Export Attendance for {format(selectedDate, "PPP")}</DialogTitle>
-                            <DialogDescription>Please enter a name for the export file.</DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="fileName" className="text-right">File Name</Label>
-                                <Input id="fileName" value={exportFileName} onChange={(e) => setExportFileName(e.target.value)} placeholder="e.g., Attendance-Report" className="col-span-3"/>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                            <DialogClose asChild><Button onClick={handleExport}>Download</Button></DialogClose>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                <ExportDialog students={studentsWithStatus} date={selectedDate} />
             </div>
         </div>
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-4">
