@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, doc, writeBatch } from "firebase/firestore";
+import { collection, onSnapshot, query, doc, writeBatch, updateDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Crown, Medal, Award, RotateCcw } from "lucide-react";
 
@@ -117,6 +117,7 @@ export const PointsTablePage: FC = () => {
             }
         });
 
+        // Award new points
         if (firstPlace) {
             batch.update(doc(db, "students", firstPlace), { quizPoints: 3 });
         }
