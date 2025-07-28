@@ -68,6 +68,16 @@ const ExportDialog: FC<ExportDialogProps> = ({ students, date }) => {
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        
+        // Auto-fit columns
+        const columnWidths = Object.keys(worksheetData[0] || {}).map((key) => {
+            const headerWidth = key.length;
+            const dataWidths = worksheetData.map(row => String(row[key as keyof typeof row] || '').length);
+            const maxWidth = Math.max(headerWidth, ...dataWidths);
+            return { wch: maxWidth + 2 }; // +2 for a little padding
+        });
+        worksheet['!cols'] = columnWidths;
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
         XLSX.writeFile(workbook, `${fileName.trim()}-${dateId}.xlsx`);
