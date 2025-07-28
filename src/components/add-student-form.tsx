@@ -81,7 +81,6 @@ export const AddStudentForm: FC = () => {
       await addDoc(collection(db, "students"), {
         ...data,
         imageUrl,
-        status: null, // Initial status
         quizPoints: 0, // Initial quiz points
       });
       toast({
