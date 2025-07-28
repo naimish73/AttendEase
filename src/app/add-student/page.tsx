@@ -1,10 +1,28 @@
 
+"use client";
+
 import { AddStudentForm } from "@/components/add-student-form";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function AddStudentPage() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated) {
+    return null; // Or a loading spinner
+  }
+  
   return (
     <main className="flex min-h-screen flex-col items-center p-4 md:p-8">
       <div className="w-full max-w-4xl">

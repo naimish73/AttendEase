@@ -1,16 +1,46 @@
 
+"use client";
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { School, UserPlus, Users, ClipboardCheck, Shuffle, FileUp, Trophy } from 'lucide-react';
+import { School, UserPlus, Users, ClipboardCheck, Shuffle, FileUp, Trophy, LogOut } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
+  const { isAuthenticated, logout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated) {
+    return null; // or a loading spinner
+  }
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 md:p-8">
-      <div className="flex items-center gap-4 mb-12">
-        <School className="h-12 w-12 text-primary" />
-        <h1 className="text-5xl font-bold font-headline text-foreground">
-          AttendEase
-        </h1>
+      <div className="w-full max-w-6xl flex justify-between items-center mb-12">
+        <div className="flex items-center gap-4">
+          <School className="h-12 w-12 text-primary" />
+          <h1 className="text-5xl font-bold font-headline text-foreground">
+            AttendEase
+          </h1>
+        </div>
+        <Button variant="outline" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">
         <Link href="/attendance" className="transform transition-transform hover:scale-105">
