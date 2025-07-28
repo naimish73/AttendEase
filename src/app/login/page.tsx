@@ -59,7 +59,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     
     // IMPORTANT: Hardcoded credentials. Replace with a secure auth system.
-    if (data.userId === "admin" && data.password === "password") {
+    if (data.userId === "AXITK010" && data.password === "Gurukul@290705") {
       toast({
         title: "Login Successful",
         description: "Welcome back!",
@@ -106,7 +106,7 @@ export default function LoginPage() {
                     <FormItem>
                       <FormLabel>User ID</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. admin" {...field} />
+                        <Input placeholder="e.g. AXITK010" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
