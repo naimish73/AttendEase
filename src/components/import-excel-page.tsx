@@ -23,7 +23,6 @@ type StudentData = {
     name: string;
     class: string;
     mobile?: string;
-    imageUrl?: string;
     status: null;
     quizPoints: number;
 }
@@ -85,7 +84,6 @@ export const ImportExcelPage: FC = () => {
                             name: String(row.name),
                             class: String(row.class),
                             mobile: row.mobile ? String(row.mobile) : '',
-                            imageUrl: row.imageUrl || `https://placehold.co/100x100.png`,
                             status: null,
                             quizPoints: quizPoints,
                         };
@@ -126,7 +124,7 @@ export const ImportExcelPage: FC = () => {
             <CardHeader>
                 <CardTitle className="text-3xl">Import Students from Excel</CardTitle>
                 <CardDescription>
-                    Upload an .xlsx or .xls file with student data. Ensure the columns are named 'name', 'class', 'mobile', 'imageUrl', and 'quizPoints'.
+                    Upload an .xlsx or .xls file with student data. Ensure the columns are named 'name', 'class', 'mobile', and 'quizPoints'.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

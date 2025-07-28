@@ -33,7 +33,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, doc, writeBatch, getDoc } from "firebase/firestore";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Medal, RotateCcw, Calendar as CalendarIcon, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -48,7 +47,6 @@ type Student = {
   id: string;
   name: string;
   class: string;
-  imageUrl?: string;
   quizPoints?: number;
 };
 
@@ -284,12 +282,8 @@ export const PointsTablePage: FC = () => {
             ) : data.length > 0 ? (
                 data.map((student) => (
                 <TableRow key={student.id} className={'hover:bg-muted/20'}>
-                    <TableCell className="font-medium flex items-center gap-3">
-                    <Avatar>
-                        <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
-                        <AvatarFallback>{student.name.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    {student.name}
+                    <TableCell className="font-medium">
+                        {student.name}
                     </TableCell>
                     <TableCell>{student.attendancePoints}</TableCell>
                     <TableCell>{student.quizPoints || 0}</TableCell>

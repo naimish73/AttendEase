@@ -25,10 +25,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
-import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
-import { CameraCapture } from "./camera-capture";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { User } from "lucide-react";
 
 const studentSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -40,7 +36,6 @@ type StudentFormValues = z.infer<typeof studentSchema>;
 
 export const AddStudentForm: FC = () => {
   const { toast } = useToast();
-  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<StudentFormValues>({
@@ -69,18 +64,8 @@ export const AddStudentForm: FC = () => {
         return;
       }
 
-      let imageUrl = `https://placehold.co/100x100.png`;
-
-      if (imageDataUrl) {
-        const storage = getStorage();
-        const storageRef = ref(storage, `student_photos/${data.name.replace(/\s+/g, '_')}_${Date.now()}.png`);
-        await uploadString(storageRef, imageDataUrl, 'data_url');
-        imageUrl = await getDownloadURL(storageRef);
-      }
-
       await addDoc(collection(db, "students"), {
         ...data,
-        imageUrl,
         quizPoints: 0, // Initial quiz points
       });
       toast({
@@ -88,7 +73,6 @@ export const AddStudentForm: FC = () => {
         description: `${data.name} has been added to the roster.`,
       });
       form.reset();
-      setImageDataUrl(null);
     } catch (error) {
       console.error("Error adding student: ", error);
       toast({
@@ -101,14 +85,12 @@ export const AddStudentForm: FC = () => {
     }
   };
 
-  const studentName = form.watch("name");
-
   return (
     <Card className="shadow-lg w-full">
       <CardHeader>
         <CardTitle className="text-3xl">Add New Student</CardTitle>
         <CardDescription>
-          Enter the details below and capture a photo to enroll a new student.
+          Enter the details below to enroll a new student.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -154,19 +136,6 @@ export const AddStudentForm: FC = () => {
               )}
             />
             
-            <FormItem>
-                <FormLabel>Profile Photo</FormLabel>
-                <div className="flex items-center gap-4">
-                    <Avatar className="h-24 w-24">
-                        <AvatarImage src={imageDataUrl ?? undefined} data-ai-hint="person" />
-                        <AvatarFallback>
-                            {studentName ? studentName.charAt(0).toUpperCase() : <User className="h-12 w-12 text-muted-foreground" />}
-                        </AvatarFallback>
-                    </Avatar>
-                    <CameraCapture onCapture={setImageDataUrl} />
-                </div>
-            </FormItem>
-
             <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
               {isSubmitting ? 'Adding Student...' : 'Add Student'}
             </Button>

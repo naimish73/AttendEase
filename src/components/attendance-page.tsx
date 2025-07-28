@@ -17,7 +17,6 @@ import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, setDoc, query } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { Separator } from "./ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { format } from "date-fns";
@@ -29,7 +28,6 @@ type Student = {
   name: string;
   class: string;
   mobile: string;
-  imageUrl?: string;
   status?: AttendanceStatus | null;
 };
 
@@ -335,11 +333,7 @@ export const AttendancePage: FC = () => {
               ) : filteredStudents.length > 0 ? (
                 filteredStudents.map((student) => (
                   <TableRow key={student.id} className="hover:bg-muted/20">
-                    <TableCell className="font-medium flex items-center gap-3">
-                        <Avatar>
-                            <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
-                            <AvatarFallback>{student.name.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
+                    <TableCell className="font-medium">
                         {student.name}
                     </TableCell>
                     <TableCell>{student.class}</TableCell>

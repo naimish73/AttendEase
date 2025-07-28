@@ -34,7 +34,6 @@ import { useToast } from "@/hooks/use-toast";
 import { db, storage } from "@/lib/firebase";
 import { collection, onSnapshot, doc, deleteDoc, query, getDocs, writeBatch } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import { Input } from "./ui/input";
 
@@ -92,8 +91,12 @@ export const StudentsPage: FC = () => {
         await deleteDoc(studentRef);
 
         if (imageUrl && !imageUrl.includes('placehold.co')) {
-            const imageRef = ref(storage, imageUrl);
-            await deleteObject(imageRef);
+            try {
+                const imageRef = ref(storage, imageUrl);
+                await deleteObject(imageRef);
+            } catch (error) {
+                // image might not exist, so we can ignore this error
+            }
         }
 
         toast({
@@ -142,7 +145,7 @@ export const StudentsPage: FC = () => {
 
       toast({
         title: "Success",
-        description: "All students and their photos have been deleted successfully.",
+        description: "All students have been deleted successfully.",
       });
     } catch (error) {
       console.error("Error deleting all students: ", error);
@@ -189,7 +192,7 @@ export const StudentsPage: FC = () => {
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This action cannot be undone. This will permanently delete ALL students
-                    and their profile photos from the servers.
+                    from the servers.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -232,11 +235,7 @@ export const StudentsPage: FC = () => {
               ) : filteredStudents.length > 0 ? (
                 filteredStudents.map((student) => (
                   <TableRow key={student.id} className="hover:bg-muted/20">
-                    <TableCell className="font-medium flex items-center gap-3">
-                      <Avatar>
-                          <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
-                          <AvatarFallback>{student.name.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
+                    <TableCell className="font-medium">
                       {student.name}
                     </TableCell>
                     <TableCell>{student.class}</TableCell>

@@ -23,12 +23,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
-import { CameraCapture } from "./camera-capture";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { User } from "lucide-react";
 import { Skeleton } from "./ui/skeleton";
 import { useRouter } from "next/navigation";
 
@@ -48,8 +44,6 @@ interface EditStudentFormProps {
 export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
   const { toast } = useToast();
   const router = useRouter();
-  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
-  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -61,8 +55,6 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
       mobile: "",
     },
   });
-
-  const studentName = form.watch("name");
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -77,7 +69,6 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
                     class: studentData.class,
                     mobile: studentData.mobile || "",
                 });
-                setExistingImageUrl(studentData.imageUrl);
             } else {
                 toast({
                     title: "Error",
@@ -103,28 +94,9 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
     setIsSubmitting(true);
     try {
       const studentRef = doc(db, "students", studentId);
-      let newImageUrl = existingImageUrl;
-
-      if (imageDataUrl) {
-        // If there was an old image and it wasn't a placeholder, delete it
-        if (existingImageUrl && !existingImageUrl.includes('placehold.co')) {
-            try {
-                const oldImageRef = ref(storage, existingImageUrl);
-                await deleteObject(oldImageRef);
-            } catch (error) {
-                console.warn("Old image deletion failed, might not exist:", error)
-            }
-        }
-        
-        // Upload the new image
-        const newStorageRef = ref(storage, `student_photos/${data.name.replace(/\s+/g, '_')}_${Date.now()}.png`);
-        await uploadString(newStorageRef, imageDataUrl, 'data_url');
-        newImageUrl = await getDownloadURL(newStorageRef);
-      }
-
+      
       await updateDoc(studentRef, {
         ...data,
-        imageUrl: newImageUrl,
       });
 
       toast({
@@ -164,13 +136,6 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
                     <Skeleton className="h-4 w-1/4" />
                     <Skeleton className="h-10 w-full" />
                 </div>
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-1/4" />
-                    <div className="flex items-center gap-4">
-                        <Skeleton className="h-24 w-24 rounded-full" />
-                        <Skeleton className="h-10 w-36" />
-                    </div>
-                </div>
                 <Skeleton className="h-11 w-full" />
             </CardContent>
         </Card>
@@ -182,7 +147,7 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
       <CardHeader>
         <CardTitle className="text-3xl">Edit Student</CardTitle>
         <CardDescription>
-          Update the student's details and profile photo below.
+          Update the student's details below.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -228,20 +193,6 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
               )}
             />
             
-            <FormItem>
-                <FormLabel>Profile Photo</FormLabel>
-                <div className="flex items-center gap-4">
-                    <Avatar className="h-24 w-24">
-                        <AvatarImage src={imageDataUrl ?? existingImageUrl ?? undefined} data-ai-hint="person" />
-                        <AvatarFallback className="bg-muted text-2xl font-bold">
-                            {studentName ? studentName.charAt(0).toUpperCase() : <User className="h-12 w-12 text-muted-foreground" />}
-                        </AvatarFallback>
-                    </Avatar>
-                    <CameraCapture onCapture={setImageDataUrl} />
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">Capture a new photo to replace the existing one.</p>
-            </FormItem>
-
             <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
               {isSubmitting ? 'Saving Changes...' : 'Save Changes'}
             </Button>
