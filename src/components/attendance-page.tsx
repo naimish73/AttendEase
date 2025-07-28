@@ -201,9 +201,8 @@ export const AttendancePage: FC = () => {
   
   const getStatusBadgeVariant = (status: AttendanceStatus | null) => {
     if (status === 'Present') return 'default';
-    if (status === 'Absent') return 'destructive';
     if (status === 'Late') return 'secondary';
-    return 'outline';
+    return 'destructive';
   }
 
   const isDayDisabled = (day: Date) => day.getDay() !== 6;
@@ -322,7 +321,7 @@ export const AttendancePage: FC = () => {
                     <TableCell>{student.class}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(student.status)} className="capitalize">
-                          {student.status || 'Unmarked'}
+                          {student.status || 'Absent'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
