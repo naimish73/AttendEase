@@ -6,8 +6,8 @@ import { ArrowLeft } from "lucide-react";
 
 export default function EditStudentPage({ params }: { params: { id: string } }) {
   return (
-    <div className="flex justify-center min-h-screen bg-background p-4 md:p-8">
-      <div className="w-full max-w-2xl">
+    <main className="flex min-h-screen flex-col items-center p-4 md:p-8">
+      <div className="w-full max-w-4xl">
         <div className="mb-4">
           <Button asChild variant="outline">
             <Link href="/manage-students">
@@ -18,6 +18,6 @@ export default function EditStudentPage({ params }: { params: { id: string } }) 
         </div>
         <EditStudentForm studentId={params.id} />
       </div>
-    </div>
+    </main>
   );
 }

@@ -259,7 +259,7 @@ export const StudentsPage: FC = () => {
                             <AlertDialogDescription>
                               This action cannot be undone. This will permanently delete the student
                               and remove their data from our servers.
-                            </AlertDialogDescription>
+                            </Description>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>

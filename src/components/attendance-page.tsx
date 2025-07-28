@@ -198,8 +198,8 @@ export const AttendancePage: FC = () => {
   return (
     <Card className="shadow-lg h-full">
       <CardHeader>
-        <div className="flex items-center justify-between">
-            <div className="flex flex-col space-y-1.5">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex-1">
                 <CardTitle>Attendance List</CardTitle>
                 <CardDescription>Mark and view student attendance for a specific date.</CardDescription>
             </div>
@@ -243,12 +243,12 @@ export const AttendancePage: FC = () => {
             </div>
         </div>
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-4">
-            <div className="flex-1 w-full md:w-auto flex gap-4 items-center">
+            <div className="flex flex-col sm:flex-row flex-1 w-full md:w-auto gap-4 items-center">
                  <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant={"outline"}
-                        className={cn("w-full md:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
+                        className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
@@ -264,12 +264,12 @@ export const AttendancePage: FC = () => {
                       />
                     </PopoverContent>
                 </Popover>
-                <div className="relative flex-1">
+                <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input placeholder="Search students..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full" />
                 </div>
             </div>
-            <div className="flex gap-4 items-center p-2 rounded-lg bg-muted/50 w-full md:w-auto">
+            <div className="flex gap-4 items-center p-2 rounded-lg bg-muted/50 w-full md:w-auto shrink-0 mt-4 md:mt-0">
                 <div className="flex items-center gap-2">
                     <UserCheck className="h-5 w-5 text-green-600" />
                     <div><p className="font-bold text-lg">{presentCount}</p><p className="text-xs text-muted-foreground">Present</p></div>
