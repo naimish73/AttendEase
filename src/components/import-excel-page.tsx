@@ -80,13 +80,14 @@ export const ImportExcelPage: FC = () => {
                 json.forEach((row, index) => {
                     if (row.name && row.class) {
                         const studentRef = doc(studentsCollection);
+                        const quizPoints = (typeof row.quizPoints === 'number' && !isNaN(row.quizPoints)) ? row.quizPoints : 0;
                         const studentData: StudentData = {
                             name: String(row.name),
                             class: String(row.class),
                             mobile: row.mobile ? String(row.mobile) : '',
                             imageUrl: row.imageUrl || `https://placehold.co/100x100.png`,
                             status: null,
-                            quizPoints: 0,
+                            quizPoints: quizPoints,
                         };
                         batch.set(studentRef, studentData);
                         successCount++;
@@ -125,7 +126,7 @@ export const ImportExcelPage: FC = () => {
             <CardHeader>
                 <CardTitle className="text-3xl">Import Students from Excel</CardTitle>
                 <CardDescription>
-                    Upload an .xlsx or .xls file with student data. Ensure the columns are named 'name', 'class', 'mobile', and 'imageUrl'.
+                    Upload an .xlsx or .xls file with student data. Ensure the columns are named 'name', 'class', 'mobile', 'imageUrl', and 'quizPoints'.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
