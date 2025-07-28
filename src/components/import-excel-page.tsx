@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, writeBatch, doc } from "firebase/firestore";
+import { collection, writeBatch, doc, getDocs, query, where, setDoc } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { Progress } from "./ui/progress";
 import { FileUp, CheckCircle, AlertCircle } from "lucide-react";
@@ -23,9 +23,10 @@ type StudentData = {
     name: string;
     class: string;
     mobile?: string;
-    status: null;
     quizPoints: number;
 }
+
+type AttendanceStatus = "Present" | "Late";
 
 export const ImportExcelPage: FC = () => {
     const { toast } = useToast();
@@ -41,6 +42,8 @@ export const ImportExcelPage: FC = () => {
             setUploadProgress(0);
         }
     }
+
+    const isValidDateString = (str: string) => /^\d{4}-\d{2}-\d{2}$/.test(str);
 
     const handleImport = async () => {
         if (!file) {
@@ -70,37 +73,68 @@ export const ImportExcelPage: FC = () => {
                     setIsUploading(false);
                     return;
                 }
-                
-                const batch = writeBatch(db);
-                const studentsCollection = collection(db, "students");
+
                 let successCount = 0;
                 let failedCount = 0;
+                
+                // Fetch existing students to avoid duplicates by name
+                const studentsRef = collection(db, "students");
+                const existingStudentsSnap = await getDocs(studentsRef);
+                const existingStudents = new Map(existingStudentsSnap.docs.map(d => [d.data().name.toLowerCase(), {id: d.id, ...d.data()}]));
+                
+                const dateColumns = Object.keys(json[0] || {}).filter(key => isValidDateString(key));
+                const attendanceUpdates: Record<string, Record<string, AttendanceStatus>> = {};
+                
+                const batch = writeBatch(db);
 
-                json.forEach((row, index) => {
-                    if (row.name && row.class) {
-                        const studentRef = doc(studentsCollection);
-                        const quizPoints = (typeof row.quizPoints === 'number' && !isNaN(row.quizPoints)) ? row.quizPoints : 0;
-                        const studentData: StudentData = {
-                            name: String(row.name),
-                            class: String(row.class),
-                            mobile: row.mobile ? String(row.mobile) : '',
-                            status: null,
-                            quizPoints: quizPoints,
-                        };
-                        batch.set(studentRef, studentData);
-                        successCount++;
-                    } else {
+                for (const [index, row] of json.entries()) {
+                    if (!row.name || !row.class) {
                         failedCount++;
+                        continue;
                     }
+
+                    const studentName = String(row.name);
+                    const studentClass = String(row.class);
+                    const studentMobile = row.mobile ? String(row.mobile) : '';
+                    const quizPoints = (typeof row.quizPoints === 'number' && !isNaN(row.quizPoints)) ? row.quizPoints : 0;
+                    
+                    let studentId: string;
+                    const existingStudent = existingStudents.get(studentName.toLowerCase());
+
+                    if(existingStudent) {
+                        studentId = existingStudent.id;
+                    } else {
+                        const newStudentRef = doc(studentsRef);
+                        studentId = newStudentRef.id;
+                        const studentData = { name: studentName, class: studentClass, mobile: studentMobile, quizPoints };
+                        batch.set(newStudentRef, studentData);
+                    }
+
+                    for (const date of dateColumns) {
+                        const status = String(row[date] || '').toUpperCase();
+                        if (status === 'P' || status === 'L') {
+                            if (!attendanceUpdates[date]) attendanceUpdates[date] = {};
+                            attendanceUpdates[date][studentId] = status === 'P' ? 'Present' : 'Late';
+                        }
+                    }
+                    successCount++;
                     setUploadProgress(((index + 1) / json.length) * 100);
-                });
+                }
 
                 await batch.commit();
 
+                // Batch update attendance after students are created/found
+                const attendanceBatch = writeBatch(db);
+                for(const [date, statuses] of Object.entries(attendanceUpdates)) {
+                    const attendanceRef = doc(db, 'attendance', date);
+                    attendanceBatch.set(attendanceRef, statuses, { merge: true });
+                }
+                await attendanceBatch.commit();
+                
                 setUploadResult({ success: successCount, failed: failedCount });
                 toast({
                     title: "Import Complete",
-                    description: `${successCount} students imported successfully. ${failedCount > 0 ? `${failedCount} rows failed.` : ''}`
+                    description: `${successCount} students processed. ${failedCount > 0 ? `${failedCount} rows failed.` : ''} Historical attendance updated.`
                 });
 
             } catch (error) {
@@ -113,7 +147,7 @@ export const ImportExcelPage: FC = () => {
                  setUploadResult({ success: 0, failed: 0 });
             } finally {
                 setIsUploading(false);
-                setFile(null);
+                setFile(null); // Clear file input
             }
         };
         reader.readAsArrayBuffer(file);
@@ -124,17 +158,17 @@ export const ImportExcelPage: FC = () => {
             <CardHeader>
                 <CardTitle className="text-3xl">Import Students from Excel</CardTitle>
                 <CardDescription>
-                    Upload an .xlsx or .xls file with student data. Ensure the columns are named 'name', 'class', 'mobile', and 'quizPoints'.
+                    Upload an .xlsx or .xls file. Use columns 'name', 'class', 'mobile', 'quizPoints'. For attendance, add columns with date headers formatted as 'YYYY-MM-DD' (e.g., '2024-07-27') and use 'P' for Present or 'L' for Late as values.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="space-y-2">
                     <Label htmlFor="excel-file">Excel File</Label>
-                    <Input id="excel-file" type="file" onChange={handleFileChange} accept=".xlsx, .xls" disabled={isUploading} />
+                    <Input id="excel-file" type="file" onChange={handleFileChange} accept=".xlsx, .xls" disabled={isUploading} key={file ? 'file-selected' : 'no-file'} />
                 </div>
                 <Button onClick={handleImport} disabled={!file || isUploading} className="w-full" size="lg">
                     <FileUp className="mr-2 h-4 w-4" />
-                    {isUploading ? `Importing... (${Math.round(uploadProgress)}%)` : "Import Students"}
+                    {isUploading ? `Importing... (${Math.round(uploadProgress)}%)` : "Import Data"}
                 </Button>
                 
                 {isUploading && (
