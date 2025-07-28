@@ -34,12 +34,14 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, doc, writeBatch, getDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Medal, RotateCcw, Calendar as CalendarIcon } from "lucide-react";
+import { Medal, RotateCcw, Calendar as CalendarIcon, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import * as XLSX from 'xlsx';
+import { Input } from "./ui/input";
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -65,6 +67,8 @@ export const PointsTablePage: FC = () => {
   const [thirdPlace, setThirdPlace] = useState<string | undefined>();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [activeTab, setActiveTab] = useState("overall");
+  const [exportFileName, setExportFileName] = useState("");
 
   const fetchStudents = useCallback(() => {
     const studentsCollection = collection(db, "students");
@@ -185,7 +189,8 @@ export const PointsTablePage: FC = () => {
         setFirstPlace(undefined);
         setSecondPlace(undefined);
         setThirdPlace(undefined);
-    } catch (error) {
+    } catch (error)
+        {
         console.error("Error logging quiz results:", error);
         toast({ title: "Error", description: "Failed to log quiz results.", variant: "destructive" });
     }
@@ -206,6 +211,45 @@ export const PointsTablePage: FC = () => {
         toast({ title: "Error", description: "Failed to reset quiz points.", variant: "destructive" });
     }
   }
+
+  const handleDownload = () => {
+    if (!exportFileName.trim()) {
+        toast({ title: "Error", description: "Please enter a valid file name.", variant: "destructive" });
+        return;
+    }
+
+    let dataToExport;
+    let fileNameSuffix;
+
+    if (activeTab === 'overall') {
+        dataToExport = overallStudentPoints.map(s => ({
+            Name: s.name,
+            Class: s.class,
+            'Attendance Points': s.attendancePoints,
+            'Quiz Points': s.quizPoints || 0,
+            'Total Points': s.totalPoints
+        }));
+        fileNameSuffix = 'overall';
+    } else {
+        dataToExport = dailyStudentPoints.map(s => ({
+            Name: s.name,
+            Class: s.class,
+            'Points for the Day': s.totalPoints,
+        }));
+        fileNameSuffix = format(selectedDate, "yyyy-MM-dd");
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Points Table");
+    XLSX.writeFile(workbook, `${exportFileName.trim()}-${fileNameSuffix}.xlsx`);
+    toast({
+        title: "Export Successful",
+        description: `Points report has been downloaded.`,
+    });
+    setExportFileName("");
+  };
+
 
   const isDayDisabled = (day: Date) => day.getDay() !== 6;
 
@@ -254,7 +298,30 @@ export const PointsTablePage: FC = () => {
                 <CardTitle>Points Table</CardTitle>
                 <CardDescription>Leaderboard based on attendance and quiz results. (Present: 2 pts, Late: 1 pt)</CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><Download className="mr-2 h-4 w-4" />Download</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Download Points Report</DialogTitle>
+                            <DialogDescription>
+                                Enter a file name for the {activeTab === 'overall' ? 'overall' : `daily (${format(selectedDate, "PPP")})`} report.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="fileName" className="text-right">File Name</Label>
+                                <Input id="fileName" value={exportFileName} onChange={(e) => setExportFileName(e.target.value)} placeholder="e.g., Points-Report" className="col-span-3"/>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                            <DialogClose asChild><Button onClick={handleDownload}>Download</Button></DialogClose>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
                 <Button variant="outline" onClick={handleResetAllPoints}><RotateCcw className="mr-2 h-4 w-4" />Reset Quiz Points</Button>
                 <Dialog>
                     <DialogTrigger asChild><Button><Medal className="mr-2 h-4 w-4" />Log Quiz Results</Button></DialogTrigger>
@@ -296,7 +363,7 @@ export const PointsTablePage: FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="overall">
+        <Tabs defaultValue="overall" onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
                 <TabsTrigger value="overall">Overall</TabsTrigger>
                 <TabsTrigger value="daily">Daily</TabsTrigger>
@@ -334,3 +401,5 @@ export const PointsTablePage: FC = () => {
     </Card>
   );
 };
+
+    
