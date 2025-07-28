@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, type FC, useEffect } from "react";
+import { useState, useMemo, type FC, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,7 +34,12 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, doc, writeBatch, getDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Medal, RotateCcw } from "lucide-react";
+import { Medal, RotateCcw, Calendar as CalendarIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -49,11 +54,6 @@ type DailyAttendance = {
     [studentId: string]: AttendanceStatus;
 }
 
-type StudentWithPoints = Student & {
-    attendancePoints: number;
-    totalPoints: number;
-}
-
 export const PointsTablePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, DailyAttendance>>({});
@@ -64,11 +64,12 @@ export const PointsTablePage: FC = () => {
   const [secondPlace, setSecondPlace] = useState<string | undefined>();
   const [thirdPlace, setThirdPlace] = useState<string | undefined>();
 
-  useEffect(() => {
-    setLoading(true);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const fetchStudents = useCallback(() => {
     const studentsCollection = collection(db, "students");
     const studentsQuery = query(studentsCollection);
-    const unsubStudents = onSnapshot(studentsQuery, (querySnapshot) => {
+    return onSnapshot(studentsQuery, (querySnapshot) => {
       const studentsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -78,10 +79,12 @@ export const PointsTablePage: FC = () => {
       console.error("Error fetching students: ", error);
       toast({ title: "Error fetching students", variant: "destructive" });
     });
-
+  }, [toast]);
+  
+  const fetchAttendance = useCallback(() => {
     const attendanceCollection = collection(db, "attendance");
     const attendanceQuery = query(attendanceCollection);
-    const unsubAttendance = onSnapshot(attendanceQuery, (querySnapshot) => {
+    return onSnapshot(attendanceQuery, (querySnapshot) => {
         const records: Record<string, DailyAttendance> = {};
         querySnapshot.forEach(doc => {
             records[doc.id] = doc.data() as DailyAttendance;
@@ -93,14 +96,21 @@ export const PointsTablePage: FC = () => {
         toast({ title: "Error fetching attendance records", variant: "destructive" });
         setLoading(false);
     });
+  }, [toast]);
+
+
+  useEffect(() => {
+    setLoading(true);
+    const unsubStudents = fetchStudents();
+    const unsubAttendance = fetchAttendance();
 
     return () => {
         unsubStudents();
         unsubAttendance();
     };
-  }, [toast]);
+  }, [fetchStudents, fetchAttendance]);
   
-  const studentPoints = useMemo(() => {
+  const overallStudentPoints = useMemo(() => {
     return students.map(student => {
       let attendancePoints = 0;
       Object.values(attendanceRecords).forEach(dailyRecord => {
@@ -114,14 +124,31 @@ export const PointsTablePage: FC = () => {
       
       const quizPoints = student.quizPoints || 0;
       const totalPoints = attendancePoints + quizPoints;
-      return { ...student, attendancePoints, totalPoints };
+      return { ...student, attendancePoints, quizPoints, totalPoints };
     }).sort((a, b) => b.totalPoints - a.totalPoints);
   }, [students, attendanceRecords]);
+  
+  const dailyStudentPoints = useMemo(() => {
+    const dateId = format(selectedDate, "yyyy-MM-dd");
+    const dailyRecord = attendanceRecords[dateId] || {};
+    
+    return students.map(student => {
+      let attendancePoints = 0;
+      const status = dailyRecord[student.id];
+      if (status === 'Present') {
+        attendancePoints = 2;
+      } else if (status === 'Late') {
+        attendancePoints = 1;
+      }
+      
+      const quizPoints = student.quizPoints || 0;
+      return { ...student, attendancePoints, quizPoints, totalPoints: attendancePoints };
+    }).sort((a, b) => b.totalPoints - a.totalPoints);
+  }, [students, attendanceRecords, selectedDate]);
 
 
   const availableForQuiz = useMemo(() => {
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = format(new Date(), "yyyy-MM-dd");
     const todaysAttendance = attendanceRecords[todayStr] || {};
     return students.filter(s => todaysAttendance[s.id] === 'Present' || todaysAttendance[s.id] === 'Late');
   }, [students, attendanceRecords]);
@@ -180,6 +207,45 @@ export const PointsTablePage: FC = () => {
     }
   }
 
+  const isDayDisabled = (day: Date) => day.getDay() !== 6;
+
+  const renderTable = (data: typeof overallStudentPoints, isDaily: boolean) => (
+    <div className="border rounded-md overflow-hidden">
+        <Table>
+            <TableHeader className="bg-muted/50">
+            <TableRow>
+                <TableHead>Student Name</TableHead>
+                <TableHead>Attendance Pts</TableHead>
+                {!isDaily && <TableHead>Quiz Pts</TableHead>}
+                <TableHead className="text-right">Total Points</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+            {loading ? (
+                <TableRow><TableCell colSpan={isDaily ? 3 : 4} className="h-24 text-center">Loading points table...</TableCell></TableRow>
+            ) : data.length > 0 ? (
+                data.map((student) => (
+                <TableRow key={student.id} className={'hover:bg-muted/20'}>
+                    <TableCell className="font-medium flex items-center gap-3">
+                    <Avatar>
+                        <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
+                        <AvatarFallback>{student.name.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    {student.name}
+                    </TableCell>
+                    <TableCell>{student.attendancePoints}</TableCell>
+                    {!isDaily && <TableCell>{student.quizPoints || 0}</TableCell>}
+                    <TableCell className="text-right font-bold text-primary text-lg">{student.totalPoints}</TableCell>
+                </TableRow>
+                ))
+            ) : (
+                <TableRow><TableCell colSpan={isDaily ? 3 : 4} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
+            )}
+            </TableBody>
+        </Table>
+    </div>
+  )
+
   return (
     <Card className="shadow-lg h-full">
       <CardHeader>
@@ -230,40 +296,40 @@ export const PointsTablePage: FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-md overflow-hidden">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Student Name</TableHead>
-                <TableHead>Attendance Pts</TableHead>
-                <TableHead>Quiz Pts</TableHead>
-                <TableHead className="text-right">Total Points</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading points table...</TableCell></TableRow>
-              ) : studentPoints.length > 0 ? (
-                studentPoints.map((student) => (
-                  <TableRow key={student.id} className={'hover:bg-muted/20'}>
-                    <TableCell className="font-medium flex items-center gap-3">
-                      <Avatar>
-                          <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
-                          <AvatarFallback>{student.name.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      {student.name}
-                    </TableCell>
-                    <TableCell>{student.attendancePoints}</TableCell>
-                    <TableCell>{student.quizPoints || 0}</TableCell>
-                    <TableCell className="text-right font-bold text-primary text-lg">{student.totalPoints}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <Tabs defaultValue="overall">
+            <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
+                <TabsTrigger value="overall">Overall</TabsTrigger>
+                <TabsTrigger value="daily">Daily</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overall" className="mt-4">
+                {renderTable(overallStudentPoints, false)}
+            </TabsContent>
+            <TabsContent value="daily" className="mt-4">
+                 <div className="mb-4">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                        <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => date && setSelectedDate(date)}
+                            disabled={isDayDisabled}
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                {renderTable(dailyStudentPoints, true)}
+            </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
