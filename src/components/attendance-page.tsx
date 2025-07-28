@@ -47,10 +47,9 @@ export const AttendancePage: FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dailyStatus, setDailyStatus] = useState<DailyAttendance>({});
 
-  const dateId = format(selectedDate, "yyyy-MM-dd");
+  const dateId = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
 
-  const fetchStudents = useCallback(async () => {
-    setLoading(true);
+  const fetchStudents = useCallback(() => {
     const studentsCollection = collection(db, "students");
     const q = query(studentsCollection);
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -80,25 +79,33 @@ export const AttendancePage: FC = () => {
     setLoading(true);
     const dateDocId = format(date, "yyyy-MM-dd");
     const attendanceRef = doc(db, "attendance", dateDocId);
-    const docSnap = await getDoc(attendanceRef);
+    
+    const unsubscribe = onSnapshot(attendanceRef, (docSnap) => {
+      if (docSnap.exists()) {
+          setDailyStatus(docSnap.data() as DailyAttendance);
+      } else {
+          setDailyStatus({});
+      }
+      setLoading(false);
+    }, (error) => {
+        console.error("Error fetching attendance: ", error);
+        toast({ title: "Error", description: "Could not load attendance data.", variant: "destructive" });
+        setLoading(false);
+    });
 
-    if (docSnap.exists()) {
-        setDailyStatus(docSnap.data() as DailyAttendance);
-    } else {
-        setDailyStatus({});
-    }
-    setLoading(false);
-  }, []);
+    return unsubscribe;
+  }, [toast]);
 
   useEffect(() => {
     const unsubscribe = fetchStudents();
-    return () => {
-        unsubscribe.then(unsub => unsub());
-    };
+    return () => unsubscribe();
   }, [fetchStudents]);
   
   useEffect(() => {
-    fetchAttendanceForDate(selectedDate);
+    const unsubscribePromise = fetchAttendanceForDate(selectedDate);
+    return () => {
+      unsubscribePromise.then(unsub => unsub());
+    };
   }, [selectedDate, fetchAttendanceForDate]);
 
   const studentsWithStatus = useMemo(() => {

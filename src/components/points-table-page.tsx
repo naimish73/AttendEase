@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, type FC, useEffect, useCallback } from "react";
+import { useState, useMemo, type FC, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, doc, writeBatch, getDocs, getDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, doc, writeBatch, getDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Medal, RotateCcw } from "lucide-react";
 
@@ -65,6 +65,7 @@ export const PointsTablePage: FC = () => {
   const [thirdPlace, setThirdPlace] = useState<string | undefined>();
 
   useEffect(() => {
+    setLoading(true);
     const studentsCollection = collection(db, "students");
     const studentsQuery = query(studentsCollection);
     const unsubStudents = onSnapshot(studentsQuery, (querySnapshot) => {
@@ -99,7 +100,7 @@ export const PointsTablePage: FC = () => {
     };
   }, [toast]);
   
-  const studentPoints: StudentWithPoints[] = useMemo(() => {
+  const studentPoints = useMemo(() => {
     return students.map(student => {
       let attendancePoints = 0;
       Object.values(attendanceRecords).forEach(dailyRecord => {

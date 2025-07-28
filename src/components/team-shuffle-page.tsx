@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, doc, getDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, doc } from "firebase/firestore";
 import { RotateCcw } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Label } from "./ui/label";
@@ -43,6 +43,7 @@ export const TeamShufflePage: FC = () => {
   const [todaysAttendance, setTodaysAttendance] = useState<DailyAttendance>({});
 
   useEffect(() => {
+    setLoading(true);
     const studentsCollection = collection(db, "students");
     const q = query(studentsCollection);
 
