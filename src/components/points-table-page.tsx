@@ -34,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, doc, writeBatch } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Crown, Medal, Award, RotateCcw } from "lucide-react";
+import { Medal, RotateCcw } from "lucide-react";
 
 type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
@@ -258,7 +258,6 @@ export const PointsTablePage: FC = () => {
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableHead className="w-[80px]">Rank</TableHead>
                 <TableHead>Student Name</TableHead>
                 <TableHead>Attendance Pts</TableHead>
                 <TableHead>Quiz Pts</TableHead>
@@ -268,21 +267,13 @@ export const PointsTablePage: FC = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     Loading points table...
                   </TableCell>
                 </TableRow>
               ) : studentPoints.length > 0 ? (
                 studentPoints.map((student, index) => (
-                  <TableRow key={student.id} className={
-                    index < 3 ? 'bg-accent/20 hover:bg-accent/30' : 'hover:bg-muted/20'
-                  }>
-                    <TableCell className="font-bold text-lg text-muted-foreground flex items-center justify-center">
-                      {index === 0 && <Crown className="h-6 w-6 text-yellow-500" />}
-                      {index === 1 && <Medal className="h-6 w-6 text-slate-400" />}
-                      {index === 2 && <Award className="h-6 w-6 text-yellow-700" />}
-                      {index > 2 && (index + 1)}
-                    </TableCell>
+                  <TableRow key={student.id} className={'hover:bg-muted/20'}>
                     <TableCell className="font-medium flex items-center gap-3">
                       <Avatar>
                           <AvatarImage src={student.imageUrl} alt={student.name} data-ai-hint="person" />
@@ -297,7 +288,7 @@ export const PointsTablePage: FC = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     No students found. Add a student to get started.
                   </TableCell>
                 </TableRow>
