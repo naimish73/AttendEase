@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, doc, writeBatch, getDocs } from "firebase/firestore";
+import { collection, onSnapshot, query, doc, writeBatch, getDocs, getDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Medal, RotateCcw } from "lucide-react";
 
@@ -134,17 +134,22 @@ export const PointsTablePage: FC = () => {
 
     try {
         const batch = writeBatch(db);
-        
-        students.forEach(s => {
-            if (s.quizPoints && s.quizPoints > 0) {
-                const studentRef = doc(db, "students", s.id);
-                batch.update(studentRef, { quizPoints: 0 });
-            }
-        });
+        const pointsToAdd = [
+            { id: firstPlace, points: 3 },
+            { id: secondPlace, points: 2 },
+            { id: thirdPlace, points: 1 },
+        ];
 
-        if (firstPlace) batch.update(doc(db, "students", firstPlace), { quizPoints: 3 });
-        if (secondPlace) batch.update(doc(db, "students", secondPlace), { quizPoints: 2 });
-        if (thirdPlace) batch.update(doc(db, "students", thirdPlace), { quizPoints: 1 });
+        for (const winner of pointsToAdd) {
+            if (winner.id) {
+                const studentRef = doc(db, "students", winner.id);
+                const studentSnap = await getDoc(studentRef);
+                if (studentSnap.exists()) {
+                    const currentPoints = studentSnap.data().quizPoints || 0;
+                    batch.update(studentRef, { quizPoints: currentPoints + winner.points });
+                }
+            }
+        }
         
         await batch.commit();
 
@@ -162,8 +167,10 @@ export const PointsTablePage: FC = () => {
     try {
         const batch = writeBatch(db);
         students.forEach(s => {
-            const studentRef = doc(db, "students", s.id);
-            batch.update(studentRef, { quizPoints: 0 });
+            if (s.quizPoints && s.quizPoints > 0) {
+                const studentRef = doc(db, "students", s.id);
+                batch.update(studentRef, { quizPoints: 0 });
+            }
         });
         await batch.commit();
         toast({ title: "Success", description: "All quiz points have been reset." });
