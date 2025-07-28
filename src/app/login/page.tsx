@@ -106,7 +106,7 @@ export default function LoginPage() {
                     <FormItem>
                       <FormLabel>User ID</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. AXITK010" {...field} />
+                        <Input placeholder="Enter User ID" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
