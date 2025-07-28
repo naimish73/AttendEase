@@ -161,12 +161,18 @@ export const AttendancePage: FC = () => {
         return;
     }
 
+    const getStatusAbbreviation = (status: AttendanceStatus | null) => {
+        if (status === 'Present') return 'P';
+        if (status === 'Late') return 'L';
+        return 'A'; // Default to Absent for 'Absent' or 'Unmarked'
+    }
+
     const worksheetData = studentsWithStatus.map(s => ({
       ID: s.id,
       Name: s.name,
       Class: s.class,
       "Mobile No.": s.mobile || '',
-      Status: s.status || 'Unmarked'
+      Status: getStatusAbbreviation(s.status)
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
