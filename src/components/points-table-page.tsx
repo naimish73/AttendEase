@@ -337,42 +337,6 @@ export const PointsTablePage: FC = () => {
                     </DialogContent>
                 </Dialog>
                 <Button variant="outline" onClick={handleResetAllPoints}><RotateCcw className="mr-2 h-4 w-4" />Reset Quiz Points</Button>
-                <Dialog>
-                    <DialogTrigger asChild><Button><Medal className="mr-2 h-4 w-4" />Log Quiz Results</Button></DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Log Quiz Winners</DialogTitle>
-                            <DialogDescription>Select the top 3 performers. Only students present today are available.</DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="first-place" className="text-right">1st Place (+3)</Label>
-                                <Select value={firstPlace} onValueChange={setFirstPlace}>
-                                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Winner" /></SelectTrigger>
-                                    <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="second-place" className="text-right">2nd Place (+2)</Label>
-                                 <Select value={secondPlace} onValueChange={setSecondPlace}>
-                                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Runner-up" /></SelectTrigger>
-                                    <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="third-place" className="text-right">3rd Place (+1)</Label>
-                                 <Select value={thirdPlace} onValueChange={setThirdPlace}>
-                                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Third Place" /></SelectTrigger>
-                                    <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                            <DialogClose asChild><Button onClick={handleLogQuizResults}>Award Points</Button></DialogClose>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </div>
         </div>
       </CardHeader>
@@ -386,7 +350,7 @@ export const PointsTablePage: FC = () => {
                 {renderTable(overallStudentPoints, false)}
             </TabsContent>
             <TabsContent value="daily" className="mt-4">
-                 <div className="mb-4">
+                 <div className="flex flex-wrap gap-4 mb-4">
                     <Popover>
                         <PopoverTrigger asChild>
                         <Button
@@ -407,6 +371,42 @@ export const PointsTablePage: FC = () => {
                         />
                         </PopoverContent>
                     </Popover>
+                    <Dialog>
+                        <DialogTrigger asChild><Button><Medal className="mr-2 h-4 w-4" />Log Quiz Results</Button></DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Log Quiz Winners</DialogTitle>
+                                <DialogDescription>Select the top 3 performers. Only students present today are available.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="first-place" className="text-right">1st Place (+3)</Label>
+                                    <Select value={firstPlace} onValueChange={setFirstPlace}>
+                                        <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Winner" /></SelectTrigger>
+                                        <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="second-place" className="text-right">2nd Place (+2)</Label>
+                                     <Select value={secondPlace} onValueChange={setSecondPlace}>
+                                        <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Runner-up" /></SelectTrigger>
+                                        <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="third-place" className="text-right">3rd Place (+1)</Label>
+                                     <Select value={thirdPlace} onValueChange={setThirdPlace}>
+                                        <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Third Place" /></SelectTrigger>
+                                        <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                                <DialogClose asChild><Button onClick={handleLogQuizResults}>Award Points</Button></DialogClose>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </div>
                 {renderTable(dailyStudentPoints, true)}
             </TabsContent>
@@ -415,11 +415,3 @@ export const PointsTablePage: FC = () => {
     </Card>
   );
 };
-
-    
-
-    
-
-    
-
-    
