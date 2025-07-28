@@ -82,6 +82,7 @@ export const AddStudentForm: FC = () => {
         ...data,
         imageUrl,
         status: null, // Initial status
+        quizPoints: 0, // Initial quiz points
       });
       toast({
         title: "Student Added",
@@ -100,6 +101,8 @@ export const AddStudentForm: FC = () => {
         setIsSubmitting(false);
     }
   };
+
+  const studentName = form.watch("name");
 
   return (
     <Card className="shadow-lg w-full">
@@ -158,7 +161,7 @@ export const AddStudentForm: FC = () => {
                     <Avatar className="h-24 w-24">
                         <AvatarImage src={imageDataUrl ?? undefined} data-ai-hint="person" />
                         <AvatarFallback>
-                            <User className="h-12 w-12 text-muted-foreground" />
+                            {studentName ? studentName.charAt(0).toUpperCase() : <User className="h-12 w-12 text-muted-foreground" />}
                         </AvatarFallback>
                     </Avatar>
                     <CameraCapture onCapture={setImageDataUrl} />

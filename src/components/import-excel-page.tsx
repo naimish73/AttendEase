@@ -24,6 +24,8 @@ type StudentData = {
     class: string;
     mobile?: string;
     imageUrl?: string;
+    status: null;
+    quizPoints: number;
 }
 
 export const ImportExcelPage: FC = () => {
@@ -84,6 +86,7 @@ export const ImportExcelPage: FC = () => {
                             mobile: row.mobile ? String(row.mobile) : '',
                             imageUrl: row.imageUrl || `https://placehold.co/100x100.png`,
                             status: null,
+                            quizPoints: 0,
                         };
                         batch.set(studentRef, studentData);
                         successCount++;

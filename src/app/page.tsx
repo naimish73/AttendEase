@@ -1,6 +1,6 @@
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { School, UserPlus, Users, ClipboardCheck, Shuffle, FileUp } from 'lucide-react';
+import { School, UserPlus, Users, ClipboardCheck, Shuffle, FileUp, Trophy } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -73,7 +73,22 @@ export default function Home() {
                 </CardContent>
             </Card>
         </Link>
-        <Link href="/import-excel" className="transform transition-transform hover:scale-105 sm:col-span-2 lg:col-span-1 lg:col-start-2">
+        <Link href="/points-table" className="transform transition-transform hover:scale-105">
+            <Card className="h-full shadow-lg hover:shadow-2xl cursor-pointer flex flex-col items-center text-center p-6">
+                <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4">
+                    <Trophy className="h-12 w-12 text-primary" />
+                </div>
+                <CardHeader className="p-0 mb-2">
+                    <CardTitle className="text-2xl">Points Table</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <CardDescription>
+                       View student leaderboard and log quiz results.
+                    </CardDescription>
+                </CardContent>
+            </Card>
+        </Link>
+        <Link href="/import-excel" className="transform transition-transform hover:scale-105">
             <Card className="h-full shadow-lg hover:shadow-2xl cursor-pointer flex flex-col items-center text-center p-6">
                 <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4">
                     <FileUp className="h-12 w-12 text-primary" />
