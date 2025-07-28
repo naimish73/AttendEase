@@ -240,6 +240,15 @@ export const PointsTablePage: FC = () => {
     }
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    const columnWidths = Object.keys(dataToExport[0] || {}).map((key) => {
+        const headerWidth = key.length;
+        const dataWidths = dataToExport.map(row => String((row as any)[key] || '').length);
+        const maxWidth = Math.max(headerWidth, ...dataWidths);
+        return { wch: maxWidth + 2 };
+    });
+    worksheet['!cols'] = columnWidths;
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Points Table");
     XLSX.writeFile(workbook, `${exportFileName.trim()}-${fileNameSuffix}.xlsx`);
@@ -401,5 +410,7 @@ export const PointsTablePage: FC = () => {
     </Card>
   );
 };
+
+    
 
     
