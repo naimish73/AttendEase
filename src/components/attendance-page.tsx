@@ -193,6 +193,8 @@ export const AttendancePage: FC = () => {
     return 'outline';
   }
 
+  const isDayDisabled = (day: Date) => day.getDay() !== 6;
+
   return (
     <Card className="shadow-lg h-full">
       <CardHeader>
@@ -253,7 +255,13 @@ export const AttendancePage: FC = () => {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(date)} initialFocus />
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(date)}
+                        disabled={isDayDisabled}
+                        initialFocus
+                      />
                     </PopoverContent>
                 </Popover>
                 <div className="relative flex-1">
