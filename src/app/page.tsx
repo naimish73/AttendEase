@@ -36,10 +36,6 @@ export default function Home() {
             AttendEase
           </h1>
         </div>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">
         <Link href="/attendance" className="transform transition-transform hover:scale-105">
@@ -132,6 +128,12 @@ export default function Home() {
                 </CardContent>
             </Card>
         </Link>
+      </div>
+       <div className="w-full max-w-6xl mt-12 flex justify-center">
+        <Button variant="outline" size="lg" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </div>
   );
