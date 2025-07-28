@@ -146,7 +146,8 @@ export const PointsTablePage: FC = () => {
       }
       
       const quizPoints = student.quizPoints || 0;
-      return { ...student, attendancePoints, quizPoints, totalPoints: attendancePoints };
+      const totalPoints = attendancePoints + quizPoints;
+      return { ...student, attendancePoints, quizPoints, totalPoints };
     }).sort((a, b) => b.totalPoints - a.totalPoints);
   }, [students, attendanceRecords, selectedDate]);
 
@@ -236,7 +237,9 @@ export const PointsTablePage: FC = () => {
             'Sr. No.': index + 1,
             Name: s.name,
             Class: s.class,
-            'Points for the Day': s.totalPoints,
+            'Attendance Points': s.attendancePoints,
+            'Quiz Points': s.quizPoints || 0,
+            'Total Points': s.totalPoints
         }));
         fileNameSuffix = format(selectedDate, "yyyy-MM-dd");
     }
@@ -271,13 +274,13 @@ export const PointsTablePage: FC = () => {
             <TableRow>
                 <TableHead>Student Name</TableHead>
                 <TableHead>Attendance Pts</TableHead>
-                {!isDaily && <TableHead>Quiz Pts</TableHead>}
+                <TableHead>Quiz Pts</TableHead>
                 <TableHead className="text-right">Total Points</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
             {loading ? (
-                <TableRow><TableCell colSpan={isDaily ? 3 : 4} className="h-24 text-center">Loading points table...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading points table...</TableCell></TableRow>
             ) : data.length > 0 ? (
                 data.map((student) => (
                 <TableRow key={student.id} className={'hover:bg-muted/20'}>
@@ -289,12 +292,12 @@ export const PointsTablePage: FC = () => {
                     {student.name}
                     </TableCell>
                     <TableCell>{student.attendancePoints}</TableCell>
-                    {!isDaily && <TableCell>{student.quizPoints || 0}</TableCell>}
+                    <TableCell>{student.quizPoints || 0}</TableCell>
                     <TableCell className="text-right font-bold text-primary text-lg">{student.totalPoints}</TableCell>
                 </TableRow>
                 ))
             ) : (
-                <TableRow><TableCell colSpan={isDaily ? 3 : 4} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
             )}
             </TableBody>
         </Table>
@@ -412,6 +415,8 @@ export const PointsTablePage: FC = () => {
     </Card>
   );
 };
+
+    
 
     
 
