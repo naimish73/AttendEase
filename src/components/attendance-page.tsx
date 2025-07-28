@@ -329,7 +329,6 @@ export const AttendancePage: FC = () => {
                         <SelectTrigger className="w-[140px] ml-auto"><SelectValue placeholder="Set Status" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Present">Present</SelectItem>
-                          <SelectItem value="Absent">Absent</SelectItem>
                           <SelectItem value="Late">Late</SelectItem>
                         </SelectContent>
                       </Select>
