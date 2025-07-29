@@ -12,7 +12,8 @@ import { School } from 'lucide-react';
 // IMPORTANT: Add the email addresses of authorized users to this list.
 // =================================================================================
 const ALLOWED_USERS = [
-  "axitkatharotiya2005@gmail.com", // <-- Replace with your authorized email addresses
+  "axitkatharotiya2005@gmail.com",
+  "nilkanthcsc1@gmail.com", // <-- Replace with your authorized email addresses
 ];
 // =================================================================================
 
