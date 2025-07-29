@@ -1,6 +1,7 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
   projectId: 'attendease-se76v',
@@ -12,8 +13,10 @@ const firebaseConfig = {
   messagingSenderId: '1073675639976',
 };
 
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-const storage = getStorage(firebaseApp);
+// Initialize Firebase
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const db = getFirestore(app);
+const storage = getStorage(app);
+const auth = getAuth(app);
 
-export { firebaseApp, db, storage };
+export { app, db, storage, auth };

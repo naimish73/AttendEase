@@ -6,20 +6,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
 export default function TeamShuffleRoutePage() {
-  const { isAuthenticated } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, loading } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) {
+  if (loading || !isAuthenticated) {
     return null; // Or a loading spinner
   }
 

@@ -5,27 +5,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { School, UserPlus, Users, ClipboardCheck, Shuffle, FileUp, Trophy, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
 export default function Home() {
-  const { isAuthenticated, logout } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, loading, logout, user } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) {
+  if (loading || !isAuthenticated) {
     return null; // or a loading spinner
   }
-
-  const handleLogout = () => {
-    logout();
-  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 md:p-8">
@@ -35,6 +22,10 @@ export default function Home() {
           <h1 className="text-5xl font-bold font-headline text-foreground">
             AttendEase
           </h1>
+        </div>
+        <div className="text-right">
+          <p className="text-muted-foreground">Signed in as</p>
+          <p className="font-semibold">{user?.email}</p>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">
@@ -130,7 +121,7 @@ export default function Home() {
         </Link>
       </div>
        <div className="w-full max-w-6xl mt-12 flex justify-center">
-        <Button variant="outline" size="lg" onClick={handleLogout}>
+        <Button variant="outline" size="lg" onClick={logout}>
           <LogOut className="mr-2 h-4 w-4" />
           Logout
         </Button>
