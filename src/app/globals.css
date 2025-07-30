@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 173 50% 92%; /* Light mint/teal background */
+    --background: 240 10% 97%; /* Light lavender-grey */
     --foreground: 224 71% 4%;
-    --card: 210 40% 99%; /* Light grey card */
+    --card: 240 10% 100%; /* White card */
     --card-foreground: 224 71% 4%;
-    --popover: 210 40% 100%;
+    --popover: 240 10% 100%;
     --popover-foreground: 224 71% 4%;
-    --primary: 174 60% 35%; /* Dark teal */
+    --primary: 255 70% 55%; /* Vibrant purple for primary elements */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 224 71% 4%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 210 40% 96.1%;
+    --accent: 350 80% 96%; /* Soft pink accent */
     --accent-foreground: 224 71% 4%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
-    --input: 210 40% 100%; /* White input */
-    --ring: 174 60% 35%;
-    --radius: 0.8rem; /* Slightly more rounded corners */
+    --input: 215 28% 93%; /* Light grey input */
+    --ring: 255 70% 55%;
+    --radius: 1.5rem; /* More rounded corners */
   }
 
   .dark {
@@ -33,7 +33,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 224 71% 4%;
     --popover-foreground: 210 40% 98%;
-    --primary: 174 62% 50%;
+    --primary: 255 70% 65%;
     --primary-foreground: 224 71% 4%;
     --secondary: 215 28% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -45,7 +45,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 215 28% 17%;
     --input: 215 28% 17%;
-    --ring: 174 62% 50%;
+    --ring: 255 70% 65%;
   }
 }
 
