@@ -298,6 +298,10 @@ export const PointsTablePage: FC = () => {
     </div>
   )
 
+  const firstPlaceOptions = availableForQuiz.filter(s => s.id !== secondPlace && s.id !== thirdPlace);
+  const secondPlaceOptions = availableForQuiz.filter(s => s.id !== firstPlace && s.id !== thirdPlace);
+  const thirdPlaceOptions = availableForQuiz.filter(s => s.id !== firstPlace && s.id !== secondPlace);
+
   return (
     <Card className="shadow-lg h-full">
       <CardHeader>
@@ -377,27 +381,27 @@ export const PointsTablePage: FC = () => {
                                     <Label htmlFor="first-place" className="text-right">1st Place (+100)</Label>
                                     <Select value={firstPlace} onValueChange={setFirstPlace}>
                                         <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Winner" /></SelectTrigger>
-                                        <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                        <SelectContent>{firstPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="second-place" className="text-right">2nd Place (+50)</Label>
                                      <Select value={secondPlace} onValueChange={setSecondPlace}>
                                         <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Runner-up" /></SelectTrigger>
-                                        <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                        <SelectContent>{secondPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="third-place" className="text-right">3rd Place (+25)</Label>
-                                     <Select value={thirdPlace} onValueChange={setThirdPlace}>
+                                     <Select value={thirdPlace} onValue-change={setThirdPlace}>
                                         <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Third Place" /></SelectTrigger>
-                                        <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                        <SelectContent>{thirdPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                             </div>
                             <DialogFooter>
                                 <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                                <DialogClose asChild><Button onClick={handleLogQuizResults}>Award Points</Button></DialogClose>
+                                <DialogClose asChild><Button onClick={handleLogQuizResults} disabled={!firstPlace && !secondPlace && !thirdPlace}>Award Points</Button></DialogClose>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
@@ -409,5 +413,3 @@ export const PointsTablePage: FC = () => {
     </Card>
   );
 };
-
-    
