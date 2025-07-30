@@ -3,23 +3,20 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase'; // Assuming auth is exported from firebase.ts
-import { useToast } from '@/hooks/use-toast';
 import { School } from 'lucide-react';
+import { User } from 'firebase/auth'; // Keep for type consistency if needed elsewhere
 
 // =================================================================================
-// IMPORTANT: Add the email addresses of authorized users to this list.
+// Admin Credentials
 // =================================================================================
-const ALLOWED_USERS = [
-  "nilkanthcsc1@gmail.com",
-];
+const ADMIN_USER_ID = "AXITK010";
+const ADMIN_PASSWORD = "Gurukul@290705";
 // =================================================================================
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: User | null;
-  login: () => void;
+  user: User | null; // This can be a mock user object if needed
+  login: (userId: string, password: string) => boolean;
   logout: () => void;
   loading: boolean;
 }
@@ -27,58 +24,37 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
-  const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        // Check if the signed-in user is in the allowed list
-        if (currentUser.email && ALLOWED_USERS.includes(currentUser.email)) {
-          setUser(currentUser);
-        } else {
-          // If not allowed, sign them out and show an error
-          signOut(auth);
-          setUser(null);
-          toast({
-            title: "Access Denied",
-            description: "This Google account is not authorized to access this application.",
-            variant: "destructive",
-          });
-           if (pathname !== '/login') {
-            router.push('/login');
-          }
-        }
-      } else {
-        setUser(null);
+    try {
+      const storedAuth = localStorage.getItem('isAuthenticated');
+      if (storedAuth === 'true') {
+        setIsAuthenticated(true);
       }
+    } catch (error) {
+      console.error("Could not access localStorage", error);
+    } finally {
       setLoading(false);
-    });
-
-    return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
   }, []);
 
-  const login = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      // The onAuthStateChanged observer will handle the user state and redirection
-    } catch (error) {
-      console.error("Error during Google sign-in:", error);
-      toast({
-        title: "Login Failed",
-        description: "Could not sign in with Google. Please try again.",
-        variant: "destructive",
-      });
+  const login = (userId: string, password: string): boolean => {
+    if (userId === ADMIN_USER_ID && password === ADMIN_PASSWORD) {
+      localStorage.setItem('isAuthenticated', 'true');
+      setIsAuthenticated(true);
+      router.push('/');
+      return true;
     }
+    return false;
   };
 
-  const logout = async () => {
-    await signOut(auth);
+  const logout = () => {
+    localStorage.removeItem('isAuthenticated');
+    setIsAuthenticated(false);
     router.push('/login');
   };
 
@@ -89,26 +65,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             <School className="h-10 w-10 text-primary animate-pulse" />
             <h1 className="text-4xl font-bold font-headline">AttendEase</h1>
         </div>
-        <p>Initializing authentication...</p>
+        <p>Initializing...</p>
       </div>
     );
   }
 
-  // If not authenticated and not on the login page, redirect
-  if (!user && pathname !== '/login') {
+  // Route protection
+  if (!loading && !isAuthenticated && pathname !== '/login') {
     router.push('/login');
     return null; // Render nothing while redirecting
   }
   
-  // If authenticated and on the login page, redirect to home
-  if (user && pathname === '/login') {
+  if (!loading && isAuthenticated && pathname === '/login') {
     router.push('/');
     return null; // Render nothing while redirecting
   }
 
-
   return (
-    <AuthContext.Provider value={{ isAuthenticated: !!user, user, login, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user: null, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
