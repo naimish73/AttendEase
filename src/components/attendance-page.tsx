@@ -190,30 +190,6 @@ export const AttendancePage: FC = () => {
     }
   };
 
-  const markAllPresent = async () => {
-    const allPresent: DailyAttendance = {};
-    students.forEach(s => {
-        allPresent[s.id] = "Present";
-    });
-
-    setDailyStatus(allPresent);
-
-    try {
-        const attendanceRef = doc(db, "attendance", dateId);
-        await setDoc(attendanceRef, allPresent);
-        toast({
-            title: "Success",
-            description: `All students marked as Present for ${format(selectedDate, "PPP")}.`,
-        });
-    } catch (error) {
-        toast({
-            title: "Error",
-            description: "Failed to mark all students as present.",
-            variant: "destructive"
-        });
-    }
-  };
-
   const handleResetAll = async () => {
     if (students.length === 0) {
       toast({ title: "No Students", description: "There are no students to reset." });
@@ -278,7 +254,6 @@ export const AttendancePage: FC = () => {
                 </CardDescription>
             </div>
             <div className="flex gap-2 flex-wrap">
-                <Button onClick={markAllPresent}><UserCheck className="mr-2 h-4 w-4" />Mark All Present</Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline"><RotateCcw className="mr-2 h-4 w-4" />Reset Day</Button>
