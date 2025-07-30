@@ -129,7 +129,6 @@ export const AttendancePage: FC = () => {
       id: doc.id,
       ...doc.data(),
     })) as Student[];
-    studentsList.sort((a, b) => a.name.localeCompare(b.name));
     setStudents(studentsList);
 
     const dateDocId = format(selectedDate, "yyyy-MM-dd");
@@ -211,19 +210,44 @@ export const AttendancePage: FC = () => {
       });
     }
   };
+  
+  const groupedAndSortedStudents = useMemo(() => {
+    const filtered = studentsWithStatus.filter((student) => {
+      const term = searchTerm.toLowerCase();
+      return (
+        student.name.toLowerCase().includes(term) ||
+        student.class.toLowerCase().includes(term) ||
+        (student.mobile && student.mobile.toLowerCase().includes(term))
+      );
+    });
 
-  const filteredStudents = useMemo(
-    () =>
-      studentsWithStatus.filter((student) => {
-        const term = searchTerm.toLowerCase();
-        return (
-          student.name.toLowerCase().includes(term) ||
-          student.class.toLowerCase().includes(term) ||
-          (student.mobile && student.mobile.toLowerCase().includes(term))
-        );
-      }),
-    [studentsWithStatus, searchTerm]
-  );
+    if (!filtered) return {};
+
+    const grouped: { [key: string]: Student[] } = filtered.reduce((acc, student) => {
+      const { class: studentClass } = student;
+      if (!acc[studentClass]) {
+        acc[studentClass] = [];
+      }
+      acc[studentClass].push(student);
+      return acc;
+    }, {} as { [key: string]: Student[] });
+
+    // Sort students within each group by name
+    for (const studentClass in grouped) {
+      grouped[studentClass].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
+    // Sort the class groups by class name
+    const sortedGrouped = Object.keys(grouped).sort().reduce(
+      (obj, key) => { 
+        obj[key] = grouped[key]; 
+        return obj;
+      }, 
+      {} as {[key: string]: Student[]}
+    );
+
+    return sortedGrouped;
+  }, [studentsWithStatus, searchTerm]);
   
   const getStatusClasses = (currentStatus?: AttendanceStatus, buttonStatus?: AttendanceStatus) => {
     if (currentStatus === buttonStatus) {
@@ -239,7 +263,7 @@ export const AttendancePage: FC = () => {
   const isDayDisabled = (day: Date) => day.getDay() !== 6;
 
   return (
-      <Card className="shadow-lg w-full">
+      <Card className="w-full max-w-7xl mx-auto shadow-lg">
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex-1">
@@ -321,36 +345,43 @@ export const AttendancePage: FC = () => {
               <TableHeader className="bg-slate-50">
                 <TableRow>
                   <TableHead>Student Name</TableHead>
-                  <TableHead>Class</TableHead>
                   <TableHead className="text-right">Actions for {format(selectedDate, "MMM d")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading...</TableCell></TableRow>
-                ) : filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
-                    <TableRow key={student.id} className="hover:bg-slate-50/50">
-                      <TableCell className="font-medium">{student.name}</TableCell>
-                      <TableCell>{student.class}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                         <Button size="sm" className={getStatusClasses(student.status, 'Present')} onClick={() => handleStatusChange(student.id, 'Present')}>
-                            <UserCheck className="h-4 w-4 md:mr-2" />
-                            <span className="hidden md:inline">Present</span>
-                        </Button>
-                        <Button size="sm" className={getStatusClasses(student.status, 'Late')} onClick={() => handleStatusChange(student.id, 'Late')}>
-                            <Clock className="h-4 w-4 md:mr-2" />
-                            <span className="hidden md:inline">Late</span>
-                        </Button>
-                        <Button size="sm" className={getStatusClasses(student.status, 'Absent')} onClick={() => handleStatusChange(student.id, 'Absent')}>
-                            <UserX className="h-4 w-4 md:mr-2" />
-                            <span className="hidden md:inline">Absent</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                  <TableRow><TableCell colSpan={2} className="h-24 text-center">Loading...</TableCell></TableRow>
+                ) : Object.keys(groupedAndSortedStudents).length > 0 ? (
+                  Object.entries(groupedAndSortedStudents).map(([className, students]) => (
+                    <>
+                      <TableRow key={`header-${className}`} className="bg-muted/50 hover:bg-muted/50">
+                        <TableCell colSpan={2} className="font-bold text-primary text-base py-3">
+                          Class: {className}
+                        </TableCell>
+                      </TableRow>
+                      {students.map((student) => (
+                        <TableRow key={student.id} className="hover:bg-slate-50/50">
+                          <TableCell className="font-medium">{student.name}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button size="sm" className={cn('px-2 sm:px-4', getStatusClasses(student.status, 'Present'))} onClick={() => handleStatusChange(student.id, 'Present')}>
+                                <UserCheck className="h-4 w-4 md:mr-2" />
+                                <span className="hidden md:inline">Present</span>
+                            </Button>
+                            <Button size="sm" className={cn('px-2 sm:px-4', getStatusClasses(student.status, 'Late'))} onClick={() => handleStatusChange(student.id, 'Late')}>
+                                <Clock className="h-4 w-4 md:mr-2" />
+                                <span className="hidden md:inline">Late</span>
+                            </Button>
+                            <Button size="sm" className={cn('px-2 sm:px-4', getStatusClasses(student.status, 'Absent'))} onClick={() => handleStatusChange(student.id, 'Absent')}>
+                                <UserX className="h-4 w-4 md:mr-2" />
+                                <span className="hidden md:inline">Absent</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={3} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={2} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
