@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, doc } from "firebase/firestore";
-import { RotateCcw, Shuffle } from "lucide-react";
+import { RotateCcw, Shuffle, Users } from "lucide-react";
 import { Label } from "./ui/label";
 import { format } from "date-fns";
 
@@ -109,14 +109,14 @@ export const TeamShufflePage: FC = () => {
   };
 
   return (
-    <Card className="shadow-sm w-full">
+    <Card className="shadow-lg w-full">
       <CardHeader>
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-4">
             <div className="bg-primary/10 p-3 rounded-lg">
                 <Shuffle className="h-6 w-6 text-primary" />
             </div>
             <div>
-                <CardTitle className="text-2xl">Team Shuffle</CardTitle>
+                <CardTitle className="text-2xl font-headline">Team Shuffle</CardTitle>
                 <CardDescription>Shuffle students present today into teams of a specific size.</CardDescription>
             </div>
         </div>
@@ -128,10 +128,10 @@ export const TeamShufflePage: FC = () => {
                 <p className="text-2xl font-bold text-primary">{availableStudents.length}</p>
                 <p className="text-xs text-muted-foreground">Only students marked 'Present' or 'Late' today can be shuffled.</p>
            </div>
-           <div className="flex items-end gap-4">
+           <div className="flex items-end gap-2 md:gap-4 flex-wrap justify-center">
                 <div>
                     <Label htmlFor="team-size" className="text-sm font-medium">Team Size</Label>
-                    <Input id="team-size" type="number" value={teamSize} onChange={(e) => setTeamSize(parseInt(e.target.value, 10) || 2)} className="w-[120px]" min="2" />
+                    <Input id="team-size" type="number" value={teamSize} onChange={(e) => setTeamSize(parseInt(e.target.value, 10) || 2)} className="w-24 md:w-[120px]" min="2" />
                 </div>
                 <Button onClick={handleShuffle} disabled={loading}>{loading ? 'Loading...' : 'Shuffle Teams'}</Button>
                 {shuffledTeams.length > 0 && (<Button variant="outline" onClick={handleReset}><RotateCcw className="mr-2 h-4 w-4" />Reset</Button>)}
@@ -143,7 +143,10 @@ export const TeamShufflePage: FC = () => {
             {shuffledTeams.map((team, index) => (
               <Card key={index} className="flex flex-col">
                 <CardHeader>
-                  <CardTitle className="text-xl">Team {index + 1}</CardTitle>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <span>Team {index + 1}</span>
+                  </CardTitle>
                   <CardDescription>{team.length} members</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
@@ -160,6 +163,16 @@ export const TeamShufflePage: FC = () => {
             ))}
           </div>
         )}
+         {shuffledTeams.length === 0 && !loading && (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Click "Shuffle Teams" to generate random teams.</p>
+          </div>
+         )}
+         {loading && (
+            <div className="text-center py-12 text-muted-foreground">
+                <p>Loading student data...</p>
+            </div>
+         )}
       </CardContent>
     </Card>
   );

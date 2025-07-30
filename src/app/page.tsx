@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { UserPlus, Users, ClipboardCheck, Shuffle, FileUp, Trophy, LogOut, UserCheck, Clock, UserX, Calendar, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -11,28 +11,48 @@ import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 
 type AttendanceStatus = "Present" | "Late";
 type DailyAttendance = {
     [studentId: string]: AttendanceStatus;
 }
+type Student = {
+    id: string;
+    name: string;
+    class: string;
+}
 
 export default function Home() {
   const { isAuthenticated, loading, logout, user } = useAuth();
+  const [totalStudents, setTotalStudents] = useState(0);
   const [todaysAttendance, setTodaysAttendance] = useState<DailyAttendance>({});
   const [date, setDate] = useState(new Date());
 
   useEffect(() => {
+    // Listener for total students
+    const unsubStudents = onSnapshot(doc(db, "students", "--total--"), (doc) => {
+        // This is a placeholder. A real implementation would query the collection size.
+        // For now, we'll get the count from the attendance for a rough estimate.
+    });
+
+    // Listener for today's attendance
     const todayId = format(new Date(), "yyyy-MM-dd");
-    const attendanceRef = doc(db, "attendance", todayId);
-    const unsub = onSnapshot(attendanceRef, (docSnap) => {
+    const unsubAttendance = onSnapshot(doc(db, "attendance", todayId), (docSnap) => {
         if(docSnap.exists()) {
-            setTodaysAttendance(docSnap.data() as DailyAttendance);
+            const data = docSnap.data() as DailyAttendance;
+            setTodaysAttendance(data);
+            setTotalStudents(Object.keys(data).length); // Approximate total students for demo
         } else {
             setTodaysAttendance({});
         }
     });
-    return () => unsub();
+
+    return () => {
+        unsubStudents();
+        unsubAttendance();
+    };
   }, []);
 
   if (loading || !isAuthenticated) {
@@ -41,145 +61,107 @@ export default function Home() {
   
   const presentCount = Object.values(todaysAttendance).filter(s => s === 'Present').length;
   const lateCount = Object.values(todaysAttendance).filter(s => s === 'Late').length;
-  const absentCount = Object.keys(todaysAttendance).length - presentCount - lateCount; // This is not quite right, but good enough for a summary
+  const absentCount = totalStudents > 0 ? totalStudents - presentCount - lateCount : 0;
+  const attendancePercentage = totalStudents > 0 ? Math.round(((presentCount + lateCount) / totalStudents) * 100) : 0;
 
+  const quickLinks = [
+    { href: "/attendance", icon: ClipboardCheck, title: "Take Attendance", description: "Mark daily attendance.", bg: "bg-teal-100", text: "text-teal-700" },
+    { href: "/points-table", icon: Trophy, title: "Points Table", description: "View student leaderboard.", bg: "bg-amber-100", text: "text-amber-700" },
+    { href: "/manage-students", icon: Users, title: "Manage Students", description: "Add, edit, or remove students.", bg: "bg-sky-100", text: "text-sky-700" },
+    { href: "/team-shuffle", icon: Shuffle, title: "Team Shuffle", description: "Create random student teams.", bg: "bg-rose-100", text: "text-rose-700" },
+    { href: "/add-student", icon: UserPlus, title: "Add Student", description: "Quickly add a new student.", bg: "bg-indigo-100", text: "text-indigo-700" },
+    { href: "/import-excel", icon: FileUp, title: "Import from Excel", description: "Bulk upload student data.", bg: "bg-slate-100", text: "text-slate-700" },
+  ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <main className="flex-1 p-4 md:p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <header className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={`https://placehold.co/100x100.png`} data-ai-hint="profile" alt="Admin" />
-                <AvatarFallback>A</AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-xl font-bold">Hello, Admin</h1>
-                <p className="text-muted-foreground">Today is {format(date, "EEEE, d MMMM")}</p>
-              </div>
-            </div>
-             <Button variant="ghost" size="icon" onClick={logout}>
-              <LogOut className="h-6 w-6" />
-            </Button>
-          </header>
-
-          {/* Daily Attendance Summary Card */}
-          <Card className="mb-8 bg-primary text-primary-foreground rounded-3xl shadow-2xl overflow-hidden">
-            <div className="p-6 flex justify-between items-center">
-              <div>
-                <CardTitle className="text-2xl">Today's Attendance</CardTitle>
-                <CardDescription className="text-primary-foreground/80">A quick look at today's numbers.</CardDescription>
-              </div>
-              <div className="text-right">
-                <p className="text-4xl font-bold">{presentCount + lateCount}</p>
-                <p className="text-primary-foreground/80">Students</p>
-              </div>
-            </div>
-            <div className="bg-primary-foreground/10 px-6 py-4 grid grid-cols-3 gap-4 text-center">
-                <div className="flex items-center justify-center gap-2">
-                    <UserCheck className="h-5 w-5" />
-                    <div>
-                        <p className="font-bold text-lg">{presentCount}</p>
-                        <p className="text-xs text-primary-foreground/80">Present</p>
+    <div className="flex flex-col flex-1">
+      {/* Header */}
+      <header className="bg-card border-b p-4 md:p-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-12 w-12 border-2 border-primary">
+            <AvatarImage src={`https://placehold.co/100x100.png`} data-ai-hint="profile" alt="Admin" />
+            <AvatarFallback>A</AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-xl font-bold font-headline">Hello, Admin</h1>
+            <p className="text-muted-foreground text-sm">Today is {format(date, "EEEE, d MMMM yyyy")}</p>
+          </div>
+        </div>
+         <Button variant="ghost" size="icon" onClick={logout}>
+          <LogOut className="h-5 w-5" />
+        </Button>
+      </header>
+      
+      <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/40">
+        <div className="max-w-7xl mx-auto">
+          {/* Daily Challenge / Attendance Card */}
+          <Card className="mb-8 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-2xl font-headline">Today's Attendance</CardTitle>
+              <CardDescription>A summary of student attendance for today.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                    <span className="text-5xl font-bold text-primary">{attendancePercentage}%</span>
+                    <div className="w-full">
+                        <p className="text-sm text-muted-foreground mb-1">Overall Attendance</p>
+                        <Progress value={attendancePercentage} className="h-3" />
                     </div>
                 </div>
-                <div className="flex items-center justify-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    <div>
-                        <p className="font-bold text-lg">{lateCount}</p>
-                        <p className="text-xs text-primary-foreground/80">Late</p>
+                <Separator className="my-6" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div className="p-4 bg-slate-100 rounded-lg">
+                        <p className="text-2xl font-bold">{totalStudents}</p>
+                        <p className="text-sm text-muted-foreground">Total Students</p>
+                    </div>
+                    <div className="p-4 bg-green-100 rounded-lg">
+                        <p className="text-2xl font-bold text-green-700">{presentCount}</p>
+                        <p className="text-sm text-muted-foreground">Present</p>
+                    </div>
+                    <div className="p-4 bg-amber-100 rounded-lg">
+                        <p className="text-2xl font-bold text-amber-700">{lateCount}</p>
+                        <p className="text-sm text-muted-foreground">Late</p>
+                    </div>
+                    <div className="p-4 bg-red-100 rounded-lg">
+                        <p className="text-2xl font-bold text-red-700">{absentCount}</p>
+                        <p className="text-sm text-muted-foreground">Absent</p>
                     </div>
                 </div>
-                 <div className="flex items-center justify-center gap-2">
-                    <UserX className="h-5 w-5" />
-                    <div>
-                        <p className="font-bold text-lg">{absentCount}</p>
-                        <p className="text-xs text-primary-foreground/80">Absent</p>
-                    </div>
-                </div>
-            </div>
+            </CardContent>
           </Card>
           
-          <h2 className="text-2xl font-bold mb-4">Your Plan</h2>
+          <h2 className="text-2xl font-bold font-headline mb-6">Quick Actions</h2>
 
           {/* Action Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link href="/attendance">
-              <Card className="h-full shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-orange-100 border-orange-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <ClipboardCheck className="h-6 w-6 text-orange-600" />
-                    Take Attendance
-                  </CardTitle>
-                  <CardDescription>Mark student attendance for the day.</CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-             <Link href="/points-table">
-              <Card className="h-full shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-purple-100 border-purple-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Trophy className="h-6 w-6 text-purple-600" />
-                    Points Table
-                  </CardTitle>
-                  <CardDescription>View leaderboard and log quiz results.</CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-             <Link href="/manage-students">
-              <Card className="h-full shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-blue-100 border-blue-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Users className="h-6 w-6 text-blue-600" />
-                    Manage Students
-                  </CardTitle>
-                  <CardDescription>Add, edit, or remove student records.</CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-             <Link href="/team-shuffle">
-              <Card className="h-full shadow-lg hover:shadow-xl transition-shadow cursor-pointer bg-green-100 border-green-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Shuffle className="h-6 w-6 text-green-600" />
-                    Team Shuffle
-                  </CardTitle>
-                  <CardDescription>Randomly group present students.</CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {quickLinks.map((link) => (
+                <Link href={link.href} key={link.href}>
+                    <Card className="h-full hover:shadow-xl transition-shadow cursor-pointer hover:-translate-y-1">
+                        <CardHeader className="flex flex-row items-center gap-4">
+                            <div className={`p-3 rounded-lg ${link.bg}`}>
+                                <link.icon className={`h-6 w-6 ${link.text}`} />
+                            </div>
+                            <div>
+                                <CardTitle className="text-lg">{link.title}</CardTitle>
+                                <CardDescription className="text-sm">{link.description}</CardDescription>
+                            </div>
+                        </CardHeader>
+                    </Card>
+                </Link>
+            ))}
           </div>
-          
-           <div className="mt-6 grid grid-cols-2 gap-4">
-             <Link href="/add-student">
-                <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <UserPlus className="h-6 w-6 text-primary" />
-                        <span className="font-semibold">Add Student</span>
-                    </CardContent>
-                </Card>
-            </Link>
-             <Link href="/import-excel">
-                <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                    <CardContent className="p-4 flex items-center gap-4">
-                        <FileUp className="h-6 w-6 text-primary" />
-                        <span className="font-semibold">Import Excel</span>
-                    </CardContent>
-                </Card>
-            </Link>
-           </div>
         </div>
       </main>
 
       {/* Bottom Navigation */}
       <footer className="sticky bottom-0 bg-card border-t shadow-t-xl md:hidden">
          <div className="max-w-md mx-auto grid grid-cols-4 items-center justify-items-center gap-2 p-2">
-            <Button variant="ghost" className="flex flex-col h-auto p-2 text-primary">
-              <Calendar className="h-6 w-6" />
-              <span className="text-xs mt-1">Today</span>
-            </Button>
+            <Link href="/" passHref>
+                <Button variant="ghost" className="flex flex-col h-auto p-2 text-primary">
+                    <Calendar className="h-6 w-6" />
+                    <span className="text-xs mt-1">Today</span>
+                </Button>
+            </Link>
              <Link href="/manage-students" passHref>
                 <Button variant="ghost" className="flex flex-col h-auto p-2 text-muted-foreground">
                     <Users className="h-6 w-6" />

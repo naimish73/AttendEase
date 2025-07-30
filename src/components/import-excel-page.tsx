@@ -77,7 +77,6 @@ export const ImportExcelPage: FC = () => {
                 let successCount = 0;
                 let failedCount = 0;
                 
-                // Fetch existing students to avoid duplicates by name
                 const studentsRef = collection(db, "students");
                 const existingStudentsSnap = await getDocs(studentsRef);
                 const existingStudents = new Map(existingStudentsSnap.docs.map(d => [d.data().name.toLowerCase(), {id: d.id, ...d.data()}]));
@@ -123,7 +122,6 @@ export const ImportExcelPage: FC = () => {
 
                 await batch.commit();
 
-                // Batch update attendance after students are created/found
                 const attendanceBatch = writeBatch(db);
                 for(const [date, statuses] of Object.entries(attendanceUpdates)) {
                     const attendanceRef = doc(db, 'attendance', date);
@@ -154,14 +152,14 @@ export const ImportExcelPage: FC = () => {
     };
 
     return (
-        <Card className="shadow-sm">
+        <Card className="shadow-lg">
             <CardHeader>
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-4">
                     <div className="bg-primary/10 p-3 rounded-lg">
                         <FileUp className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                        <CardTitle className="text-2xl">Import Students from Excel</CardTitle>
+                        <CardTitle className="text-2xl font-headline">Import Students from Excel</CardTitle>
                         <CardDescription>
                             Upload an .xlsx or .xls file. Use columns 'name', 'class', 'mobile', 'quizPoints'. For attendance, add columns with date headers formatted as 'YYYY-MM-DD' (e.g., '2024-07-27') and use 'P' for Present or 'L' for Late as values.
                         </CardDescription>

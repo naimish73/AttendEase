@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -45,16 +46,17 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start bg-background">
-      <div className="w-full h-64 bg-primary text-primary-foreground flex flex-col items-center justify-center text-center p-8">
-        <School className="h-16 w-16 mb-4" />
-        <h1 className="text-4xl font-bold">Hello!</h1>
-        <p className="text-lg">Welcome to AttendEase</p>
-      </div>
-      <div className="w-full max-w-md px-4 -mt-20">
-        <Card className="shadow-2xl rounded-3xl">
+    <main className="flex-1 flex flex-col items-center justify-center bg-muted/40 p-4">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center">
+            <School className="h-12 w-12 mx-auto text-primary" />
+            <h1 className="text-4xl font-headline font-bold mt-4">AttendEase</h1>
+            <p className="text-muted-foreground mt-2">Welcome! Please sign in.</p>
+        </div>
+        <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl text-center">Login</CardTitle>
+            <CardTitle className="text-2xl">Login</CardTitle>
+            <CardDescription>Enter your credentials to access your account.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -64,7 +66,6 @@ export default function LoginPage() {
                 placeholder="Enter User ID"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
-                className="rounded-full px-5 h-12"
               />
             </div>
             <div className="space-y-2">
@@ -75,12 +76,11 @@ export default function LoginPage() {
                 placeholder="Enter Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="rounded-full px-5 h-12"
               />
             </div>
             <Button
               onClick={handleLogin}
-              className="w-full rounded-full"
+              className="w-full"
               size="lg"
             >
               Sign In

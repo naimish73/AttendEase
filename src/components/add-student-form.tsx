@@ -87,14 +87,14 @@ export const AddStudentForm: FC = () => {
   };
 
   return (
-    <Card className="w-full shadow-sm">
+    <Card className="w-full shadow-lg">
       <CardHeader>
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-4">
           <div className="bg-primary/10 p-3 rounded-lg">
             <UserPlus className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-2xl">Add New Student</CardTitle>
+            <CardTitle className="text-2xl font-headline">Add New Student</CardTitle>
             <CardDescription>
               Enter the details below to enroll a new student.
             </CardDescription>
