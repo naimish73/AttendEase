@@ -118,9 +118,9 @@ export const PointsTablePage: FC = () => {
       Object.values(attendanceRecords).forEach(dailyRecord => {
         const status = dailyRecord[student.id];
         if (status === 'Present') {
-          attendancePoints += 2;
+          attendancePoints += 100;
         } else if (status === 'Late') {
-          attendancePoints += 1;
+          attendancePoints += 50;
         }
       });
       
@@ -138,9 +138,9 @@ export const PointsTablePage: FC = () => {
       let attendancePoints = 0;
       const status = dailyRecord[student.id];
       if (status === 'Present') {
-        attendancePoints = 2;
+        attendancePoints = 100;
       } else if (status === 'Late') {
-        attendancePoints = 1;
+        attendancePoints = 50;
       }
       
       const quizPoints = student.quizPoints || 0;
@@ -166,9 +166,9 @@ export const PointsTablePage: FC = () => {
     try {
         const batch = writeBatch(db);
         const pointsToAdd = [
-            { id: firstPlace, points: 3 },
-            { id: secondPlace, points: 2 },
-            { id: thirdPlace, points: 1 },
+            { id: firstPlace, points: 100 },
+            { id: secondPlace, points: 50 },
+            { id: thirdPlace, points: 25 },
         ];
 
         for (const winner of pointsToAdd) {
@@ -304,7 +304,7 @@ export const PointsTablePage: FC = () => {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex-1">
                 <CardTitle>Points Table</CardTitle>
-                <CardDescription>Leaderboard based on attendance and quiz results. (Present: 2 pts, Late: 1 pt)</CardDescription>
+                <CardDescription>Leaderboard based on attendance and quiz results. (Present: 100 pts, Late: 50 pts)</CardDescription>
             </div>
             <div className="flex gap-2 flex-wrap">
                 <Dialog>
@@ -374,21 +374,21 @@ export const PointsTablePage: FC = () => {
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="first-place" className="text-right">1st Place (+3)</Label>
+                                    <Label htmlFor="first-place" className="text-right">1st Place (+100)</Label>
                                     <Select value={firstPlace} onValueChange={setFirstPlace}>
                                         <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Winner" /></SelectTrigger>
                                         <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="second-place" className="text-right">2nd Place (+2)</Label>
+                                    <Label htmlFor="second-place" className="text-right">2nd Place (+50)</Label>
                                      <Select value={secondPlace} onValueChange={setSecondPlace}>
                                         <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Runner-up" /></SelectTrigger>
                                         <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="third-place" className="text-right">3rd Place (+1)</Label>
+                                    <Label htmlFor="third-place" className="text-right">3rd Place (+25)</Label>
                                      <Select value={thirdPlace} onValueChange={setThirdPlace}>
                                         <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Third Place" /></SelectTrigger>
                                         <SelectContent>{availableForQuiz.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
@@ -409,3 +409,5 @@ export const PointsTablePage: FC = () => {
     </Card>
   );
 };
+
+    
