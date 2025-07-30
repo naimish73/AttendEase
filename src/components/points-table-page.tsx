@@ -393,7 +393,7 @@ export const PointsTablePage: FC = () => {
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="third-place" className="text-right">3rd Place (+25)</Label>
-                                     <Select value={thirdPlace} onValue-change={setThirdPlace}>
+                                     <Select value={thirdPlace} onValueChange={setThirdPlace}>
                                         <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Third Place" /></SelectTrigger>
                                         <SelectContent>{thirdPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                                     </Select>
