@@ -7,7 +7,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { School } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -46,22 +45,18 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md">
-        <div className="flex items-center justify-center gap-4 mb-8">
-            <School className="h-10 w-10 text-primary" />
-            <h1 className="text-4xl font-bold font-headline text-foreground">
-            AttendEase
-            </h1>
-        </div>
-        <Card className="shadow-2xl">
+    <main className="flex min-h-screen flex-col items-center justify-start bg-background">
+      <div className="w-full h-64 bg-primary text-primary-foreground flex flex-col items-center justify-center text-center p-8">
+        <School className="h-16 w-16 mb-4" />
+        <h1 className="text-4xl font-bold">Hello!</h1>
+        <p className="text-lg">Welcome to AttendEase</p>
+      </div>
+      <div className="w-full max-w-md px-4 -mt-20">
+        <Card className="shadow-2xl rounded-3xl">
           <CardHeader>
-            <CardTitle className="text-3xl">Admin Login</CardTitle>
-            <CardDescription>
-              Please enter your credentials to access the portal.
-            </CardDescription>
+            <CardTitle className="text-2xl text-center">Login</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="userId">User ID</Label>
               <Input
@@ -69,6 +64,7 @@ export default function LoginPage() {
                 placeholder="Enter User ID"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
+                className="rounded-full px-5 h-12"
               />
             </div>
             <div className="space-y-2">
@@ -79,11 +75,12 @@ export default function LoginPage() {
                 placeholder="Enter Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="rounded-full px-5 h-12"
               />
             </div>
             <Button
               onClick={handleLogin}
-              className="w-full"
+              className="w-full rounded-full"
               size="lg"
             >
               Sign In

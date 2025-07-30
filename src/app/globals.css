@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
+    --background: 173 50% 92%; /* Light mint/teal background */
     --foreground: 224 71% 4%;
-    --card: 210 40% 100%;
+    --card: 210 40% 99%; /* Light grey card */
     --card-foreground: 224 71% 4%;
     --popover: 210 40% 100%;
     --popover-foreground: 224 71% 4%;
-    --primary: 174 72% 40%;
+    --primary: 174 60% 35%; /* Dark teal */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 224 71% 4%;
@@ -21,9 +21,9 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 174 72% 40%;
-    --radius: 0.5rem;
+    --input: 210 40% 100%; /* White input */
+    --ring: 174 60% 35%;
+    --radius: 0.8rem; /* Slightly more rounded corners */
   }
 
   .dark {
