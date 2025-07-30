@@ -310,7 +310,7 @@ export const PointsTablePage: FC = () => {
                 <CardTitle>Points Table</CardTitle>
                 <CardDescription>Leaderboard based on attendance and quiz results. (Present: 100 pts, Late: 50 pts)</CardDescription>
             </div>
-            <div className="flex gap-2 flex-wrap">
+             <div className="flex gap-2 flex-wrap">
                 <Dialog>
                     <DialogTrigger asChild>
                         <Button variant="outline"><Download className="mr-2 h-4 w-4" />Download</Button>
@@ -334,7 +334,6 @@ export const PointsTablePage: FC = () => {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
-                <Button variant="outline" onClick={handleResetAllPoints}><RotateCcw className="mr-2 h-4 w-4" />Reset Quiz Points</Button>
             </div>
         </div>
       </CardHeader>
@@ -405,6 +404,7 @@ export const PointsTablePage: FC = () => {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                    <Button variant="outline" onClick={handleResetAllPoints}><RotateCcw className="mr-2 h-4 w-4" />Reset Quiz Points</Button>
                 </div>
                 {renderTable(dailyStudentPoints, true)}
             </TabsContent>
