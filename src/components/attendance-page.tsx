@@ -249,144 +249,138 @@ export const AttendancePage: FC = () => {
     [studentsWithStatus, searchTerm]
   );
   
-  const getStatusButtonVariant = (currentStatus: AttendanceStatus, buttonStatus: AttendanceStatus) => {
+  const getStatusClasses = (currentStatus?: AttendanceStatus, buttonStatus?: AttendanceStatus) => {
     if (currentStatus === buttonStatus) {
         switch(buttonStatus) {
-            case 'Present': return 'default';
-            case 'Late': return 'secondary';
-            case 'Absent': return 'destructive';
+            case 'Present': return 'bg-teal-500 text-white hover:bg-teal-600';
+            case 'Late': return 'bg-amber-500 text-white hover:bg-amber-600';
+            case 'Absent': return 'bg-red-500 text-white hover:bg-red-600';
         }
     }
-    return 'outline';
+    return 'bg-gray-200 text-gray-700 hover:bg-gray-300';
   }
 
   const isDayDisabled = (day: Date) => day.getDay() !== 6;
 
   return (
-    <div className="flex flex-col flex-grow">
-      <main className="flex-1 bg-muted/40 p-4 md:p-8 lg:p-10">
-        <div className="w-full max-w-7xl mx-auto">
-          <Card className="shadow-lg w-full">
-            <CardHeader>
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="bg-primary/10 p-3 rounded-lg">
-                    <ClipboardCheck className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-2xl font-headline">Take Attendance</CardTitle>
-                    <CardDescription>Mark and view student attendance for a specific date.</CardDescription>
-                  </div>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                    <Button onClick={markAllPresent}><UserCheck className="mr-2 h-4 w-4" />Mark All Present</Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline"><RotateCcw className="mr-2 h-4 w-4" />Reset Day</Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>This will reset attendance for all students on {format(selectedDate, "PPP")}. This cannot be undone.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleResetAll}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    <ExportDialog students={studentsWithStatus} date={selectedDate} />
-                </div>
+      <Card className="shadow-lg w-full">
+        <CardHeader>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex-1">
+                <CardTitle className="text-3xl font-bold flex items-center gap-3">
+                    <div className="bg-primary/10 p-3 rounded-full">
+                        <ClipboardCheck className="h-6 w-6 text-primary" />
+                    </div>
+                    <span>Take Attendance</span>
+                </CardTitle>
+                <CardDescription className="mt-2">
+                    Mark and view student attendance for a specific date.
+                </CardDescription>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+                <Button onClick={markAllPresent}><UserCheck className="mr-2 h-4 w-4" />Mark All Present</Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline"><RotateCcw className="mr-2 h-4 w-4" />Reset Day</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>This will reset attendance for all students on {format(selectedDate, "PPP")}. This cannot be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleResetAll}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <ExportDialog students={studentsWithStatus} date={selectedDate} />
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6">
+            <div className="flex flex-col sm:flex-row flex-1 w-full md:w-auto gap-4 items-center">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    disabled={isDayDisabled}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search students..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full" />
               </div>
-              <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6">
-                <div className="flex flex-col sm:flex-row flex-1 w-full md:w-auto gap-4 items-center">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(date) => date && setSelectedDate(date)}
-                        disabled={isDayDisabled}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search students..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full" />
-                  </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center p-2 rounded-lg bg-slate-100 w-full md:w-auto shrink-0 mt-4 md:mt-0">
+                <div className="px-3 py-1">
+                    <p className="font-bold text-lg text-teal-600">{presentCount}</p>
+                    <p className="text-xs text-muted-foreground">Present</p>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center p-2 rounded-lg bg-muted w-full md:w-auto shrink-0 mt-4 md:mt-0">
-                    <div className="px-3 py-1">
-                        <p className="font-bold text-lg text-green-600">{presentCount}</p>
-                        <p className="text-xs text-muted-foreground">Present</p>
-                    </div>
-                    <div className="px-3 py-1">
-                        <p className="font-bold text-lg text-yellow-600">{lateCount}</p>
-                        <p className="text-xs text-muted-foreground">Late</p>
-                    </div>
-                    <div className="px-3 py-1">
-                        <p className="font-bold text-lg text-red-600">{absentCount}</p>
-                        <p className="text-xs text-muted-foreground">Absent</p>
-                    </div>
+                <div className="px-3 py-1">
+                    <p className="font-bold text-lg text-amber-600">{lateCount}</p>
+                    <p className="text-xs text-muted-foreground">Late</p>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow>
-                      <TableHead>Student Name</TableHead>
-                      <TableHead>Class</TableHead>
-                      <TableHead className="text-right">Actions for {format(selectedDate, "MMM d")}</TableHead>
+                <div className="px-3 py-1">
+                    <p className="font-bold text-lg text-red-600">{absentCount}</p>
+                    <p className="text-xs text-muted-foreground">Absent</p>
+                </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead>Student Name</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead className="text-right">Actions for {format(selectedDate, "MMM d")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading...</TableCell></TableRow>
+                ) : filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => (
+                    <TableRow key={student.id} className="hover:bg-slate-50/50">
+                      <TableCell className="font-medium">{student.name}</TableCell>
+                      <TableCell>{student.class}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                         <Button size="sm" className={getStatusClasses(student.status, 'Present')} onClick={() => handleStatusChange(student.id, 'Present')}>
+                            <UserCheck className="h-4 w-4 md:mr-2" />
+                            <span className="hidden md:inline">Present</span>
+                        </Button>
+                        <Button size="sm" className={getStatusClasses(student.status, 'Late')} onClick={() => handleStatusChange(student.id, 'Late')}>
+                            <Clock className="h-4 w-4 md:mr-2" />
+                            <span className="hidden md:inline">Late</span>
+                        </Button>
+                        <Button size="sm" className={getStatusClasses(student.status, 'Absent')} onClick={() => handleStatusChange(student.id, 'Absent')}>
+                            <UserX className="h-4 w-4 md:mr-2" />
+                            <span className="hidden md:inline">Absent</span>
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading...</TableCell></TableRow>
-                    ) : filteredStudents.length > 0 ? (
-                      filteredStudents.map((student) => (
-                        <TableRow key={student.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium">{student.name}</TableCell>
-                          <TableCell>{student.class}</TableCell>
-                          <TableCell className="text-right space-x-2">
-                             <Button size="sm" variant={getStatusButtonVariant(student.status, 'Present')} onClick={() => handleStatusChange(student.id, 'Present')}>
-                                <UserCheck className="h-4 w-4 md:mr-2" />
-                                <span className="hidden md:inline">Present</span>
-                            </Button>
-                            <Button size="sm" variant={getStatusButtonVariant(student.status, 'Late')} onClick={() => handleStatusChange(student.id, 'Late')}>
-                                <Clock className="h-4 w-4 md:mr-2" />
-                                <span className="hidden md:inline">Late</span>
-                            </Button>
-                            <Button size="sm" variant={getStatusButtonVariant(student.status, 'Absent')} onClick={() => handleStatusChange(student.id, 'Absent')}>
-                                <UserX className="h-4 w-4 md:mr-2" />
-                                <span className="hidden md:inline">Absent</span>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow><TableCell colSpan={3} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+                  ))
+                ) : (
+                  <TableRow><TableCell colSpan={3} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
   );
 };
-
-    
