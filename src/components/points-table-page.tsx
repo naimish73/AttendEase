@@ -233,7 +233,7 @@ export const PointsTablePage: FC = () => {
 
     if (activeTab === 'overall') {
         dataToExport = overallStudentPoints.map((s, index) => ({
-            'Sr. No.': index + 1,
+            'Rank': index + 1,
             Name: s.name,
             Class: s.class,
             'Attendance Points': s.attendancePoints,
@@ -243,7 +243,7 @@ export const PointsTablePage: FC = () => {
         fileNameSuffix = 'overall';
     } else {
         dataToExport = dailyStudentPoints.map((s, index) => ({
-            'Sr. No.': index + 1,
+            'Rank': index + 1,
             Name: s.name,
             Class: s.class,
             'Attendance Points': s.attendancePoints,
@@ -281,6 +281,7 @@ export const PointsTablePage: FC = () => {
         <Table>
             <TableHeader className="bg-muted/50">
             <TableRow>
+                <TableHead className="w-[80px]">Rank</TableHead>
                 <TableHead>Student Name</TableHead>
                 <TableHead>Attendance Pts</TableHead>
                 <TableHead>Quiz Pts</TableHead>
@@ -289,10 +290,18 @@ export const PointsTablePage: FC = () => {
             </TableHeader>
             <TableBody>
             {loading ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading points table...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading points table...</TableCell></TableRow>
             ) : data.length > 0 ? (
-                data.map((student) => (
+                data.map((student, index) => (
                 <TableRow key={student.id} className={'hover:bg-muted/20'}>
+                    <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                           <span>{index + 1}</span>
+                           {index === 0 && <Medal className="h-5 w-5 text-yellow-500" />}
+                           {index === 1 && <Medal className="h-5 w-5 text-gray-400" />}
+                           {index === 2 && <Medal className="h-5 w-5 text-amber-700" />}
+                        </div>
+                    </TableCell>
                     <TableCell className="font-medium">
                         {student.name}
                     </TableCell>
@@ -302,7 +311,7 @@ export const PointsTablePage: FC = () => {
                 </TableRow>
                 ))
             ) : (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
             )}
             </TableBody>
         </Table>
