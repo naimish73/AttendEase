@@ -44,7 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, doc, writeBatch, getDoc, getDocs } from "firebase/firestore";
-import { Medal, RotateCcw, Calendar as CalendarIcon, Download, Trophy, Trash2 } from "lucide-react";
+import { Medal, RotateCcw, Calendar as CalendarIcon, Download, Trophy } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
@@ -222,26 +222,6 @@ export const PointsTablePage: FC = () => {
     }
   }
 
-  const handleResetAllAttendance = async () => {
-    try {
-        const attendanceCollection = collection(db, "attendance");
-        const snapshot = await getDocs(attendanceCollection);
-        if(snapshot.empty) {
-            toast({ title: "No Attendance Records", description: "There is no attendance data to delete." });
-            return;
-        }
-
-        const batch = writeBatch(db);
-        snapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-        toast({ title: "Success", description: "All attendance records have been deleted." });
-    } catch (error) {
-        toast({ title: "Error", description: "Failed to delete attendance records.", variant: "destructive" });
-    }
-  }
-
   const handleDownload = () => {
     if (!exportFileName.trim()) {
         toast({ title: "Error", description: "Please enter a valid file name.", variant: "destructive" });
@@ -299,7 +279,7 @@ export const PointsTablePage: FC = () => {
   const renderTable = (data: typeof overallStudentPoints, isDaily: boolean) => (
     <div className="border rounded-lg overflow-hidden">
         <Table>
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-slate-50">
             <TableRow>
                 <TableHead className="w-[80px]">Rank</TableHead>
                 <TableHead>Student Name</TableHead>
@@ -313,7 +293,7 @@ export const PointsTablePage: FC = () => {
                 <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading points table...</TableCell></TableRow>
             ) : data.length > 0 ? (
                 data.map((student, index) => (
-                <TableRow key={student.id} className={'hover:bg-muted/5'}>
+                <TableRow key={student.id} className={'hover:bg-slate-50/50'}>
                     <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                            <span>{index + 1}</span>
@@ -327,7 +307,7 @@ export const PointsTablePage: FC = () => {
                     </TableCell>
                     <TableCell>{student.attendancePoints}</TableCell>
                     <TableCell>{student.quizPoints || 0}</TableCell>
-                    <TableCell className="text-right font-bold text-primary text-lg">{student.totalPoints}</TableCell>
+                    <TableCell className="text-right font-bold text-teal-600 text-lg">{student.totalPoints}</TableCell>
                 </TableRow>
                 ))
             ) : (
@@ -343,14 +323,13 @@ export const PointsTablePage: FC = () => {
   const thirdPlaceOptions = availableForQuiz.filter(s => s.id !== firstPlace && s.id !== secondPlace);
 
   return (
-     <div className="w-full max-w-7xl mx-auto p-4 md:p-8 lg:p-10 space-y-6">
-      <Card className="shadow-lg">
+    <Card className="w-full shadow-lg">
         <CardHeader>
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex-1">
                     <CardTitle className="text-3xl font-bold flex items-center gap-3">
-                      <div className="bg-primary/10 p-3 rounded-full">
-                        <Trophy className="h-6 w-6 text-primary" />
+                      <div className="bg-teal-100 p-3 rounded-full">
+                        <Trophy className="h-6 w-6 text-teal-600" />
                       </div>
                       <span>Points Leaderboard</span>
                     </CardTitle>
@@ -392,25 +371,6 @@ export const PointsTablePage: FC = () => {
                     <TabsTrigger value="daily">Daily View</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overall" className="mt-4 space-y-4">
-                    <div className="flex justify-end">
-                      <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                              <Button variant="destructive"><Trash2 className="mr-2 h-4 w-4" />Reset All Attendance</Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                              <AlertDialogHeader>
-                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete ALL attendance records for every student, which will also reset their attendance points to zero.
-                              </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleResetAllAttendance}>Yes, delete all attendance</AlertDialogAction>
-                              </AlertDialogFooter>
-                          </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
                     {renderTable(overallStudentPoints, false)}
                 </TabsContent>
                 <TabsContent value="daily" className="mt-4">
@@ -493,7 +453,6 @@ export const PointsTablePage: FC = () => {
                 </TabsContent>
             </Tabs>
         </CardContent>
-      </Card>
-    </div>
+    </Card>
   );
 };
