@@ -2,19 +2,17 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect, useCallback } from "react";
-import { Download, Search, RotateCcw, UserCheck, Clock, CalendarIcon, ClipboardCheck } from "lucide-react";
+import { Download, Search, RotateCcw, UserCheck, Clock, CalendarIcon, ClipboardCheck, UserX, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, setDoc, query } from "firebase/firestore";
+import { collection, onSnapshot, doc, setDoc, query, writeBatch, getDocs } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { Separator } from "./ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -22,17 +20,17 @@ import { Calendar } from "./ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-type AttendanceStatus = "Present" | "Late";
+type AttendanceStatus = "Present" | "Late" | "Absent";
 type Student = {
   id: string;
   name: string;
   class: string;
   mobile: string;
-  status?: AttendanceStatus | null;
+  status?: AttendanceStatus;
 };
 
 type DailyAttendance = {
-    [studentId: string]: AttendanceStatus;
+    [studentId: string]: "Present" | "Late";
 }
 
 interface ExportDialogProps {
@@ -51,7 +49,7 @@ const ExportDialog: FC<ExportDialogProps> = ({ students, date }) => {
             return;
         }
 
-        const getStatusAbbreviation = (status: AttendanceStatus | null | undefined) => {
+        const getStatusAbbreviation = (status: AttendanceStatus | undefined) => {
             if (status === 'Present') return 'P';
             if (status === 'Late') return 'L';
             return 'A';
@@ -67,12 +65,11 @@ const ExportDialog: FC<ExportDialogProps> = ({ students, date }) => {
 
         const worksheet = XLSX.utils.json_to_sheet(worksheetData);
         
-        // Auto-fit columns
         const columnWidths = Object.keys(worksheetData[0] || {}).map((key) => {
             const headerWidth = key.length;
             const dataWidths = worksheetData.map(row => String(row[key as keyof typeof row] || '').length);
             const maxWidth = Math.max(headerWidth, ...dataWidths);
-            return { wch: maxWidth + 2 }; // +2 for a little padding
+            return { wch: maxWidth + 2 };
         });
         worksheet['!cols'] = columnWidths;
 
@@ -122,38 +119,22 @@ export const AttendancePage: FC = () => {
 
   const dateId = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
 
-  const fetchStudents = useCallback(() => {
-    const studentsCollection = collection(db, "students");
-    const q = query(studentsCollection);
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const studentsList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Student[];
-
-      studentsList.sort((a, b) => {
-        const classComparison = a.class.localeCompare(b.class);
-        if (classComparison !== 0) return classComparison;
-        return a.name.localeCompare(b.name);
-      });
-      setStudents(studentsList);
-    }, (error) => {
-      console.error("Error fetching students: ", error);
-      toast({
-        title: "Error fetching students",
-        description: "Could not retrieve student data from Firestore.",
-        variant: "destructive",
-      });
-    });
-    return unsubscribe;
-  }, [toast]);
-
-  const fetchAttendanceForDate = useCallback(async (date: Date) => {
+  const fetchStudentsAndAttendance = useCallback(async () => {
     setLoading(true);
-    const dateDocId = format(date, "yyyy-MM-dd");
+
+    const studentsCollection = collection(db, "students");
+    const studentsQuery = query(studentsCollection);
+    const studentsSnapshot = await getDocs(studentsQuery);
+    const studentsList = studentsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Student[];
+    studentsList.sort((a, b) => a.name.localeCompare(b.name));
+    setStudents(studentsList);
+
+    const dateDocId = format(selectedDate, "yyyy-MM-dd");
     const attendanceRef = doc(db, "attendance", dateDocId);
-    
-    const unsubscribe = onSnapshot(attendanceRef, (docSnap) => {
+    const unsubAttendance = onSnapshot(attendanceRef, (docSnap) => {
       if (docSnap.exists()) {
           setDailyStatus(docSnap.data() as DailyAttendance);
       } else {
@@ -166,43 +147,70 @@ export const AttendancePage: FC = () => {
         setLoading(false);
     });
 
-    return unsubscribe;
-  }, [toast]);
-
-  useEffect(() => {
-    const unsubscribe = fetchStudents();
-    return () => unsubscribe();
-  }, [fetchStudents]);
+    return () => unsubAttendance();
+  }, [selectedDate, toast]);
   
   useEffect(() => {
-    const unsubscribePromise = fetchAttendanceForDate(selectedDate);
+    const unsubscribePromise = fetchStudentsAndAttendance();
     return () => {
       unsubscribePromise.then(unsub => unsub());
     };
-  }, [selectedDate, fetchAttendanceForDate]);
+  }, [fetchStudentsAndAttendance]);
 
   const studentsWithStatus = useMemo(() => {
     return students.map(student => ({
       ...student,
-      status: dailyStatus[student.id] || null,
+      status: dailyStatus[student.id] || "Absent",
     }));
   }, [students, dailyStatus]);
   
   const presentCount = useMemo(() => Object.values(dailyStatus).filter(s => s === 'Present').length, [dailyStatus]);
   const lateCount = useMemo(() => Object.values(dailyStatus).filter(s => s === 'Late').length, [dailyStatus]);
+  const absentCount = students.length - presentCount - lateCount;
 
-  const handleStatusChange = async (studentId: string, status: AttendanceStatus) => {
-    const newStatus = { ...dailyStatus, [studentId]: status };
+  const handleStatusChange = async (studentId: string, status: "Present" | "Late" | "Absent") => {
+    const newStatus = { ...dailyStatus };
+    
+    if (status === 'Absent') {
+        delete newStatus[studentId];
+    } else {
+        newStatus[studentId] = status;
+    }
+    
     setDailyStatus(newStatus);
     try {
         const attendanceRef = doc(db, "attendance", dateId);
-        await setDoc(attendanceRef, newStatus, { merge: true });
+        await setDoc(attendanceRef, newStatus);
     } catch (error) {
         toast({
             title: "Error",
             description: "Failed to update student status.",
             variant: "destructive"
         })
+    }
+  };
+
+  const markAllPresent = async () => {
+    const allPresent: DailyAttendance = {};
+    students.forEach(s => {
+        allPresent[s.id] = "Present";
+    });
+
+    setDailyStatus(allPresent);
+
+    try {
+        const attendanceRef = doc(db, "attendance", dateId);
+        await setDoc(attendanceRef, allPresent);
+        toast({
+            title: "Success",
+            description: `All students marked as Present for ${format(selectedDate, "PPP")}.`,
+        });
+    } catch (error) {
+        toast({
+            title: "Error",
+            description: "Failed to mark all students as present.",
+            variant: "destructive"
+        });
     }
   };
 
@@ -241,49 +249,58 @@ export const AttendancePage: FC = () => {
     [studentsWithStatus, searchTerm]
   );
   
-  const getStatusBadgeVariant = (status: AttendanceStatus | null) => {
-    if (status === 'Present') return 'default';
-    if (status === 'Late') return 'secondary';
-    return 'destructive';
+  const getStatusButtonVariant = (currentStatus: AttendanceStatus, buttonStatus: AttendanceStatus) => {
+    if (currentStatus === buttonStatus) {
+        switch(buttonStatus) {
+            case 'Present': return 'default';
+            case 'Late': return 'secondary';
+            case 'Absent': return 'destructive';
+        }
+    }
+    return 'outline';
   }
 
   const isDayDisabled = (day: Date) => day.getDay() !== 6;
 
   return (
-    <Card className="shadow-sm w-full">
-      <CardHeader>
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-lg">
-                <ClipboardCheck className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                  <CardTitle className="text-2xl">Take Attendance</CardTitle>
-                  <CardDescription>Mark and view student attendance for a specific date.</CardDescription>
-              </div>
-            </div>
-            <div className="flex gap-2">
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
+    <div className="flex flex-col flex-grow">
+      <main className="flex-1 bg-muted/40 p-4 md:p-8 lg:p-10">
+        <div className="w-full max-w-7xl mx-auto">
+          <Card className="shadow-lg w-full">
+            <CardHeader>
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="bg-primary/10 p-3 rounded-lg">
+                    <ClipboardCheck className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl font-headline">Take Attendance</CardTitle>
+                    <CardDescription>Mark and view student attendance for a specific date.</CardDescription>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                    <Button onClick={markAllPresent}><UserCheck className="mr-2 h-4 w-4" />Mark All Present</Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
                         <Button variant="outline"><RotateCcw className="mr-2 h-4 w-4" />Reset Day</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
                         <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>This will reset attendance for all students on {format(selectedDate, "PPP")}. This cannot be undone.</AlertDialogDescription>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>This will reset attendance for all students on {format(selectedDate, "PPP")}. This cannot be undone.</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleResetAll}>Continue</AlertDialogAction>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleResetAll}>Continue</AlertDialogAction>
                         </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-                <ExportDialog students={studentsWithStatus} date={selectedDate} />
-            </div>
-        </div>
-        <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6">
-            <div className="flex flex-col sm:flex-row flex-1 w-full md:w-auto gap-4 items-center">
-                 <Popover>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <ExportDialog students={studentsWithStatus} date={selectedDate} />
+                </div>
+              </div>
+              <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6">
+                <div className="flex flex-col sm:flex-row flex-1 w-full md:w-auto gap-4 items-center">
+                  <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant={"outline"}
@@ -302,69 +319,74 @@ export const AttendancePage: FC = () => {
                         initialFocus
                       />
                     </PopoverContent>
-                </Popover>
-                <div className="relative flex-1 w-full">
+                  </Popover>
+                  <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input placeholder="Search students..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full" />
+                  </div>
                 </div>
-            </div>
-            <div className="flex gap-4 items-center p-2 rounded-lg bg-muted w-full md:w-auto shrink-0 mt-4 md:mt-0">
-                <div className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5 text-green-600" />
-                    <div><p className="font-bold text-lg">{presentCount}</p><p className="text-xs text-muted-foreground">Present</p></div>
+                <div className="grid grid-cols-3 gap-2 text-center p-2 rounded-lg bg-muted w-full md:w-auto shrink-0 mt-4 md:mt-0">
+                    <div className="px-3 py-1">
+                        <p className="font-bold text-lg text-green-600">{presentCount}</p>
+                        <p className="text-xs text-muted-foreground">Present</p>
+                    </div>
+                    <div className="px-3 py-1">
+                        <p className="font-bold text-lg text-yellow-600">{lateCount}</p>
+                        <p className="text-xs text-muted-foreground">Late</p>
+                    </div>
+                    <div className="px-3 py-1">
+                        <p className="font-bold text-lg text-red-600">{absentCount}</p>
+                        <p className="text-xs text-muted-foreground">Absent</p>
+                    </div>
                 </div>
-                <Separator orientation="vertical" className="h-8" />
-                <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-yellow-600" />
-                    <div><p className="font-bold text-lg">{lateCount}</p><p className="text-xs text-muted-foreground">Late</p></div>
-                </div>
-            </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead>Student Name</TableHead>
+                      <TableHead>Class</TableHead>
+                      <TableHead className="text-right">Actions for {format(selectedDate, "MMM d")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow><TableCell colSpan={3} className="h-24 text-center">Loading...</TableCell></TableRow>
+                    ) : filteredStudents.length > 0 ? (
+                      filteredStudents.map((student) => (
+                        <TableRow key={student.id} className="hover:bg-muted/50">
+                          <TableCell className="font-medium">{student.name}</TableCell>
+                          <TableCell>{student.class}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                             <Button size="sm" variant={getStatusButtonVariant(student.status, 'Present')} onClick={() => handleStatusChange(student.id, 'Present')}>
+                                <UserCheck className="h-4 w-4 md:mr-2" />
+                                <span className="hidden md:inline">Present</span>
+                            </Button>
+                            <Button size="sm" variant={getStatusButtonVariant(student.status, 'Late')} onClick={() => handleStatusChange(student.id, 'Late')}>
+                                <Clock className="h-4 w-4 md:mr-2" />
+                                <span className="hidden md:inline">Late</span>
+                            </Button>
+                            <Button size="sm" variant={getStatusButtonVariant(student.status, 'Absent')} onClick={() => handleStatusChange(student.id, 'Absent')}>
+                                <UserX className="h-4 w-4 md:mr-2" />
+                                <span className="hidden md:inline">Absent</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow><TableCell colSpan={3} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Student Name</TableHead>
-                <TableHead>Class</TableHead>
-                <TableHead>Status for {format(selectedDate, "MMM d")}</TableHead>
-                <TableHead className="text-right w-[160px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading...</TableCell></TableRow>
-              ) : filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => (
-                  <TableRow key={student.id} className="hover:bg-muted/5">
-                    <TableCell className="font-medium">
-                        {student.name}
-                    </TableCell>
-                    <TableCell>{student.class}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(student.status)} className="capitalize">
-                          {student.status || 'Absent'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Select value={student.status ?? ""} onValueChange={(value: AttendanceStatus) => handleStatusChange(student.id, value)}>
-                        <SelectTrigger className="w-[140px] ml-auto"><SelectValue placeholder="Set Status" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Present">Present</SelectItem>
-                          <SelectItem value="Late">Late</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+      </main>
+    </div>
   );
 };
+
+    
