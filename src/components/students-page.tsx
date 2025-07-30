@@ -157,18 +157,16 @@ export const StudentsPage: FC = () => {
     }
   };
 
-  const filteredStudents = useMemo(
-    () =>
-      students.filter((student) => {
-        const term = searchTerm.toLowerCase();
-        return (
-          student.name.toLowerCase().includes(term) ||
-          student.class.toLowerCase().includes(term) ||
-          (student.mobile && student.mobile.toLowerCase().includes(term))
-        );
-      }),
-    [students, searchTerm]
-  );
+  const filteredStudents = useMemo(() => {
+    return students.filter((student) => {
+      const term = searchTerm.toLowerCase();
+      return (
+        student.name.toLowerCase().includes(term) ||
+        student.class.toLowerCase().includes(term) ||
+        (student.mobile && student.mobile.toLowerCase().includes(term))
+      );
+    });
+  }, [students, searchTerm]);
 
   return (
     <Card className="shadow-lg w-full">
@@ -258,7 +256,7 @@ export const StudentsPage: FC = () => {
                             <AlertDialogDescription>
                               This action cannot be undone. This will permanently delete the student
                               and remove their data from our servers.
-                            </Description>
+                            </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
