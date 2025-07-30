@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, type FC, useEffect, useMemo } from "react";
-import { Trash2, Pencil, Search, Users } from "lucide-react";
+import { useState, type FC, useEffect, useMemo, useCallback } from "react";
+import { Trash2, Pencil, Search, Users, ArrowDown, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -50,6 +50,22 @@ export const StudentsPage: FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
+
+  const handleScroll = useCallback(() => {
+    if (window.scrollY > 300) {
+      setShowScrollButtons(true);
+    } else {
+      setShowScrollButtons(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [handleScroll]);
 
   useEffect(() => {
     const studentsCollection = collection(db, "students");
@@ -168,123 +184,143 @@ export const StudentsPage: FC = () => {
     });
   }, [students, searchTerm]);
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  
+  const scrollToBottom = () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  };
+
   return (
-    <Card className="shadow-sm w-full">
-      <CardHeader>
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-                <div className="bg-primary/10 p-3 rounded-lg">
-                    <Users className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                    <CardTitle className="text-2xl">Manage Students</CardTitle>
-                    <CardDescription>
-                    View, edit, or delete student records.
-                    </CardDescription>
-                </div>
-            </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete All Students
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete ALL students
-                    from the servers.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAllStudents}>
-                    Yes, delete all
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-        </div>
-        <div className="relative mt-6">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, class, or mobile..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full md:w-1/2 lg:w-1/3"
-            />
+    <>
+      <Card className="w-full shadow-lg">
+        <CardHeader>
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                  <div className="bg-primary/10 p-3 rounded-lg">
+                      <Users className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                      <CardTitle className="text-2xl font-headline">Manage Students</CardTitle>
+                      <CardDescription>
+                      View, edit, or delete student records.
+                      </CardDescription>
+                  </div>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete All Students
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete ALL students
+                      from the servers.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAllStudents}>
+                      Yes, delete all
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
           </div>
-      </CardHeader>
-      <CardContent>
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Student Name</TableHead>
-                <TableHead>Class</TableHead>
-                <TableHead>Mobile No.</TableHead>
-                <TableHead className="text-right w-[140px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          <div className="relative mt-6">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, class, or mobile..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full md:w-1/2 lg:w-1/3"
+              />
+            </div>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    Loading students...
-                  </TableCell>
+                  <TableHead>Student Name</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Mobile No.</TableHead>
+                  <TableHead className="text-right w-[140px]">Actions</TableHead>
                 </TableRow>
-              ) : filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => (
-                  <TableRow key={student.id} className="hover:bg-muted/5">
-                    <TableCell className="font-medium">
-                      {student.name}
-                    </TableCell>
-                    <TableCell>{student.class}</TableCell>
-                    <TableCell>{student.mobile}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button asChild variant="outline" size="icon">
-                        <Link href={`/edit-student/${student.id}`}>
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the student
-                              and remove their data from our servers.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteStudent(student.id, student.imageUrl)}>
-                              Continue
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      Loading students...
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    No students found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                ) : filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => (
+                    <TableRow key={student.id} className="hover:bg-muted/5">
+                      <TableCell className="font-medium">
+                        {student.name}
+                      </TableCell>
+                      <TableCell>{student.class}</TableCell>
+                      <TableCell>{student.mobile}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button asChild variant="outline" size="icon">
+                          <Link href={`/edit-student/${student.id}`}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the student
+                                and remove their data from our servers.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteStudent(student.id, student.imageUrl)}>
+                                Continue
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      No students found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+      {showScrollButtons && (
+        <div className="fixed bottom-6 right-6 flex flex-col gap-2">
+          <Button size="icon" onClick={scrollToTop} variant="outline" className="rounded-full shadow-lg">
+            <ArrowUp className="h-5 w-5" />
+          </Button>
+          <Button size="icon" onClick={scrollToBottom} variant="outline" className="rounded-full shadow-lg">
+            <ArrowDown className="h-5 w-5" />
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </>
   );
 };

@@ -43,8 +43,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, doc, writeBatch, getDoc, getDocs } from "firebase/firestore";
-import { Medal, RotateCcw, Calendar as CalendarIcon, Download, Trophy } from "lucide-react";
+import { collection, onSnapshot, query, doc, writeBatch, getDoc, getDocs, setDoc } from "firebase/firestore";
+import { Medal, RotateCcw, Calendar as CalendarIcon, Download, Trophy, ArrowUp, ArrowDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
@@ -62,7 +62,7 @@ type Student = {
 };
 
 type DailyAttendance = {
-    [studentId: string]: AttendanceStatus;
+    [studentId: string]: "Present" | "Late";
 }
 
 export const PointsTablePage: FC = () => {
@@ -78,6 +78,22 @@ export const PointsTablePage: FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState("overall");
   const [exportFileName, setExportFileName] = useState("");
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
+
+  const handleScroll = useCallback(() => {
+    if (window.scrollY > 300) {
+      setShowScrollButtons(true);
+    } else {
+      setShowScrollButtons(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [handleScroll]);
 
   const fetchStudents = useCallback(() => {
     const studentsCollection = collection(db, "students");
@@ -322,7 +338,17 @@ export const PointsTablePage: FC = () => {
   const secondPlaceOptions = availableForQuiz.filter(s => s.id !== firstPlace && s.id !== thirdPlace);
   const thirdPlaceOptions = availableForQuiz.filter(s => s.id !== firstPlace && s.id !== secondPlace);
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const scrollToBottom = () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  };
+
+
   return (
+    <>
     <Card className="w-full shadow-lg">
         <CardHeader>
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -454,5 +480,16 @@ export const PointsTablePage: FC = () => {
             </Tabs>
         </CardContent>
     </Card>
+      {showScrollButtons && (
+        <div className="fixed bottom-6 right-6 flex flex-col gap-2">
+          <Button size="icon" onClick={scrollToTop} variant="outline" className="rounded-full shadow-lg">
+            <ArrowUp className="h-5 w-5" />
+          </Button>
+          <Button size="icon" onClick={scrollToBottom} variant="outline" className="rounded-full shadow-lg">
+            <ArrowDown className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
+    </>
   );
 };

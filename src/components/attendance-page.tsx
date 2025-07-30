@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect, useCallback } from "react";
-import { Download, Search, RotateCcw, UserCheck, Clock, CalendarIcon, ClipboardCheck, UserX, Users } from "lucide-react";
+import { Download, Search, RotateCcw, UserCheck, Clock, CalendarIcon, ClipboardCheck, UserX, Users, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -116,8 +116,25 @@ export const AttendancePage: FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dailyStatus, setDailyStatus] = useState<DailyAttendance>({});
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
 
   const dateId = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
+
+  const handleScroll = useCallback(() => {
+    if (window.scrollY > 300) {
+      setShowScrollButtons(true);
+    } else {
+      setShowScrollButtons(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [handleScroll]);
+
 
   const fetchStudentsAndAttendance = useCallback(async () => {
     setLoading(true);
@@ -262,7 +279,16 @@ export const AttendancePage: FC = () => {
 
   const isDayDisabled = (day: Date) => day.getDay() !== 6;
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  
+  const scrollToBottom = () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  };
+
   return (
+    <>
       <Card className="w-full max-w-7xl mx-auto shadow-lg">
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -388,5 +414,16 @@ export const AttendancePage: FC = () => {
           </div>
         </CardContent>
       </Card>
+      {showScrollButtons && (
+        <div className="fixed bottom-6 right-6 flex flex-col gap-2">
+          <Button size="icon" onClick={scrollToTop} variant="outline" className="rounded-full shadow-lg">
+            <ArrowUp className="h-5 w-5" />
+          </Button>
+          <Button size="icon" onClick={scrollToBottom} variant="outline" className="rounded-full shadow-lg">
+            <ArrowDown className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
+    </>
   );
 };
