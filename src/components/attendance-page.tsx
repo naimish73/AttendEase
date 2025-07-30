@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect, useCallback } from "react";
-import { Download, Search, RotateCcw, UserCheck, Clock, CalendarIcon } from "lucide-react";
+import { Download, Search, RotateCcw, UserCheck, Clock, CalendarIcon, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -250,12 +250,17 @@ export const AttendancePage: FC = () => {
   const isDayDisabled = (day: Date) => day.getDay() !== 6;
 
   return (
-    <Card className="shadow-lg h-full">
+    <Card className="shadow-sm w-full">
       <CardHeader>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex-1">
-                <CardTitle>Attendance List</CardTitle>
-                <CardDescription>Mark and view student attendance for a specific date.</CardDescription>
+            <div className="flex items-center gap-4">
+              <div className="bg-primary/10 p-3 rounded-lg">
+                <ClipboardCheck className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                  <CardTitle className="text-2xl">Take Attendance</CardTitle>
+                  <CardDescription>Mark and view student attendance for a specific date.</CardDescription>
+              </div>
             </div>
             <div className="flex gap-2">
                 <AlertDialog>
@@ -276,7 +281,7 @@ export const AttendancePage: FC = () => {
                 <ExportDialog students={studentsWithStatus} date={selectedDate} />
             </div>
         </div>
-        <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-4">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6">
             <div className="flex flex-col sm:flex-row flex-1 w-full md:w-auto gap-4 items-center">
                  <Popover>
                     <PopoverTrigger asChild>
@@ -303,7 +308,7 @@ export const AttendancePage: FC = () => {
                     <Input placeholder="Search students..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full" />
                 </div>
             </div>
-            <div className="flex gap-4 items-center p-2 rounded-lg bg-muted/50 w-full md:w-auto shrink-0 mt-4 md:mt-0">
+            <div className="flex gap-4 items-center p-2 rounded-lg bg-muted w-full md:w-auto shrink-0 mt-4 md:mt-0">
                 <div className="flex items-center gap-2">
                     <UserCheck className="h-5 w-5 text-green-600" />
                     <div><p className="font-bold text-lg">{presentCount}</p><p className="text-xs text-muted-foreground">Present</p></div>
@@ -317,7 +322,7 @@ export const AttendancePage: FC = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-md overflow-hidden">
+        <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
@@ -332,7 +337,7 @@ export const AttendancePage: FC = () => {
                 <TableRow><TableCell colSpan={4} className="h-24 text-center">Loading...</TableCell></TableRow>
               ) : filteredStudents.length > 0 ? (
                 filteredStudents.map((student) => (
-                  <TableRow key={student.id} className="hover:bg-muted/20">
+                  <TableRow key={student.id} className="hover:bg-muted/5">
                     <TableCell className="font-medium">
                         {student.name}
                     </TableCell>

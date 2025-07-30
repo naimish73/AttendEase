@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { UserPlus } from "lucide-react";
 
 const studentSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -86,16 +87,23 @@ export const AddStudentForm: FC = () => {
   };
 
   return (
-    <Card className="shadow-lg w-full">
+    <Card className="w-full shadow-sm">
       <CardHeader>
-        <CardTitle className="text-3xl">Add New Student</CardTitle>
-        <CardDescription>
-          Enter the details below to enroll a new student.
-        </CardDescription>
+        <div className="flex items-center gap-4">
+          <div className="bg-primary/10 p-3 rounded-lg">
+            <UserPlus className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-2xl">Add New Student</CardTitle>
+            <CardDescription>
+              Enter the details below to enroll a new student.
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
             <FormField
               control={form.control}
               name="name"
@@ -136,7 +144,7 @@ export const AddStudentForm: FC = () => {
               )}
             />
             
-            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+            <Button type="submit" size="lg" disabled={isSubmitting}>
               {isSubmitting ? 'Adding Student...' : 'Add Student'}
             </Button>
           </form>

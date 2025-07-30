@@ -27,6 +27,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { useRouter } from "next/navigation";
+import { UserCog } from "lucide-react";
 
 
 const studentSchema = z.object({
@@ -118,12 +119,12 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
 
   if (loading) {
     return (
-        <Card className="shadow-lg w-full">
+        <Card className="shadow-sm w-full">
             <CardHeader>
                 <Skeleton className="h-8 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pt-6">
                 <div className="space-y-2">
                     <Skeleton className="h-4 w-1/4" />
                     <Skeleton className="h-10 w-full" />
@@ -143,16 +144,23 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
   }
 
   return (
-    <Card className="shadow-lg w-full">
+    <Card className="shadow-sm w-full">
       <CardHeader>
-        <CardTitle className="text-3xl">Edit Student</CardTitle>
-        <CardDescription>
-          Update the student's details below.
-        </CardDescription>
+        <div className="flex items-center gap-4">
+          <div className="bg-primary/10 p-3 rounded-lg">
+            <UserCog className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-2xl">Edit Student</CardTitle>
+            <CardDescription>
+              Update the student's details below.
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
             <FormField
               control={form.control}
               name="name"
@@ -193,7 +201,7 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
               )}
             />
             
-            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+            <Button type="submit" size="lg" disabled={isSubmitting}>
               {isSubmitting ? 'Saving Changes...' : 'Save Changes'}
             </Button>
           </form>

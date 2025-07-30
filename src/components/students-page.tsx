@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, type FC, useEffect, useMemo } from "react";
-import { Trash2, Pencil, Search } from "lucide-react";
+import { Trash2, Pencil, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -169,14 +169,19 @@ export const StudentsPage: FC = () => {
   }, [students, searchTerm]);
 
   return (
-    <Card className="shadow-lg w-full">
+    <Card className="shadow-sm w-full">
       <CardHeader>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex-1">
-                <CardTitle className="text-3xl">Manage Students</CardTitle>
-                <CardDescription>
-                View, edit, or delete student records.
-                </CardDescription>
+            <div className="flex items-center gap-4">
+                <div className="bg-primary/10 p-3 rounded-lg">
+                    <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                    <CardTitle className="text-2xl">Manage Students</CardTitle>
+                    <CardDescription>
+                    View, edit, or delete student records.
+                    </CardDescription>
+                </div>
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -202,7 +207,7 @@ export const StudentsPage: FC = () => {
               </AlertDialogContent>
             </AlertDialog>
         </div>
-        <div className="relative mt-4">
+        <div className="relative mt-6">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by name, class, or mobile..."
@@ -213,7 +218,7 @@ export const StudentsPage: FC = () => {
           </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-md overflow-hidden">
+        <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
@@ -232,7 +237,7 @@ export const StudentsPage: FC = () => {
                 </TableRow>
               ) : filteredStudents.length > 0 ? (
                 filteredStudents.map((student) => (
-                  <TableRow key={student.id} className="hover:bg-muted/20">
+                  <TableRow key={student.id} className="hover:bg-muted/5">
                     <TableCell className="font-medium">
                       {student.name}
                     </TableCell>

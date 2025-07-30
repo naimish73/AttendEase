@@ -44,7 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, doc, writeBatch, getDoc } from "firebase/firestore";
-import { Medal, RotateCcw, Calendar as CalendarIcon, Download } from "lucide-react";
+import { Medal, RotateCcw, Calendar as CalendarIcon, Download, Trophy } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
@@ -277,7 +277,7 @@ export const PointsTablePage: FC = () => {
   const isDayDisabled = (day: Date) => day.getDay() !== 6;
 
   const renderTable = (data: typeof overallStudentPoints, isDaily: boolean) => (
-    <div className="border rounded-md overflow-hidden">
+    <div className="border rounded-lg overflow-hidden">
         <Table>
             <TableHeader className="bg-muted/50">
             <TableRow>
@@ -293,7 +293,7 @@ export const PointsTablePage: FC = () => {
                 <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading points table...</TableCell></TableRow>
             ) : data.length > 0 ? (
                 data.map((student, index) => (
-                <TableRow key={student.id} className={'hover:bg-muted/20'}>
+                <TableRow key={student.id} className={'hover:bg-muted/5'}>
                     <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                            <span>{index + 1}</span>
@@ -323,12 +323,17 @@ export const PointsTablePage: FC = () => {
   const thirdPlaceOptions = availableForQuiz.filter(s => s.id !== firstPlace && s.id !== secondPlace);
 
   return (
-    <Card className="shadow-lg h-full">
+    <Card className="shadow-sm w-full">
       <CardHeader>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex-1">
-                <CardTitle>Points Table</CardTitle>
-                <CardDescription>Leaderboard based on attendance and quiz results. (Present: 100 pts, Late: 50 pts)</CardDescription>
+            <div className="flex items-center gap-4">
+                <div className="bg-primary/10 p-3 rounded-lg">
+                    <Trophy className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                    <CardTitle className="text-2xl">Points Leaderboard</CardTitle>
+                    <CardDescription>Leaderboard based on attendance and quiz results. (Present: 100 pts, Late: 50 pts)</CardDescription>
+                </div>
             </div>
              <div className="flex gap-2 flex-wrap">
                 <Dialog>
@@ -360,19 +365,19 @@ export const PointsTablePage: FC = () => {
       <CardContent>
         <Tabs defaultValue="overall" onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-                <TabsTrigger value="overall">Overall</TabsTrigger>
-                <TabsTrigger value="daily">Daily</TabsTrigger>
+                <TabsTrigger value="overall">Overall Leaderboard</TabsTrigger>
+                <TabsTrigger value="daily">Daily View</TabsTrigger>
             </TabsList>
             <TabsContent value="overall" className="mt-4">
                 {renderTable(overallStudentPoints, false)}
             </TabsContent>
             <TabsContent value="daily" className="mt-4">
-                 <div className="flex flex-wrap gap-4 mb-4">
+                 <div className="flex flex-wrap gap-4 mb-4 items-center">
                     <Popover>
                         <PopoverTrigger asChild>
                         <Button
                             variant={"outline"}
-                            className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
+                            className={cn("w-full sm:w-auto justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
                         >
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}

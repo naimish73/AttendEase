@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, doc } from "firebase/firestore";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Shuffle } from "lucide-react";
 import { Label } from "./ui/label";
 import { format } from "date-fns";
 
@@ -109,13 +109,20 @@ export const TeamShufflePage: FC = () => {
   };
 
   return (
-    <Card className="shadow-lg h-full">
+    <Card className="shadow-sm w-full">
       <CardHeader>
-        <CardTitle>Team Shuffle</CardTitle>
-        <CardDescription>Shuffle students present today into teams of a specific size.</CardDescription>
+        <div className="flex items-center gap-4">
+            <div className="bg-primary/10 p-3 rounded-lg">
+                <Shuffle className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+                <CardTitle className="text-2xl">Team Shuffle</CardTitle>
+                <CardDescription>Shuffle students present today into teams of a specific size.</CardDescription>
+            </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col md:flex-row gap-4 mb-6 items-center p-4 bg-muted/50 rounded-lg">
+        <div className="flex flex-col md:flex-row gap-4 mb-6 items-center p-4 bg-muted rounded-lg">
            <div className="flex-1">
                 <p className="text-sm font-medium">Available Students Today</p>
                 <p className="text-2xl font-bold text-primary">{availableStudents.length}</p>

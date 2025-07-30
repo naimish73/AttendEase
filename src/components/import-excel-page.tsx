@@ -154,19 +154,26 @@ export const ImportExcelPage: FC = () => {
     };
 
     return (
-        <Card className="shadow-lg">
+        <Card className="shadow-sm">
             <CardHeader>
-                <CardTitle className="text-3xl">Import Students from Excel</CardTitle>
-                <CardDescription>
-                    Upload an .xlsx or .xls file. Use columns 'name', 'class', 'mobile', 'quizPoints'. For attendance, add columns with date headers formatted as 'YYYY-MM-DD' (e.g., '2024-07-27') and use 'P' for Present or 'L' for Late as values.
-                </CardDescription>
+                <div className="flex items-center gap-4">
+                    <div className="bg-primary/10 p-3 rounded-lg">
+                        <FileUp className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                        <CardTitle className="text-2xl">Import Students from Excel</CardTitle>
+                        <CardDescription>
+                            Upload an .xlsx or .xls file. Use columns 'name', 'class', 'mobile', 'quizPoints'. For attendance, add columns with date headers formatted as 'YYYY-MM-DD' (e.g., '2024-07-27') and use 'P' for Present or 'L' for Late as values.
+                        </CardDescription>
+                    </div>
+                </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 max-w-2xl">
                 <div className="space-y-2">
                     <Label htmlFor="excel-file">Excel File</Label>
                     <Input id="excel-file" type="file" onChange={handleFileChange} accept=".xlsx, .xls" disabled={isUploading} key={file ? 'file-selected' : 'no-file'} />
                 </div>
-                <Button onClick={handleImport} disabled={!file || isUploading} className="w-full" size="lg">
+                <Button onClick={handleImport} disabled={!file || isUploading} size="lg">
                     <FileUp className="mr-2 h-4 w-4" />
                     {isUploading ? `Importing... (${Math.round(uploadProgress)}%)` : "Import Data"}
                 </Button>
@@ -184,7 +191,7 @@ export const ImportExcelPage: FC = () => {
                                 <span>{uploadResult.success} Succeeded</span>
                             </div>
                             {uploadResult.failed > 0 && (
-                                <div className="flex items-center gap-2 text-red-600">
+                                <div className="flex items-center gap-2 text-destructive">
                                     <AlertCircle className="h-5 w-5" />
                                     <span>{uploadResult.failed} Failed</span>
                                 </div>
