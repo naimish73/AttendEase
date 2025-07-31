@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { School } from 'lucide-react';
-import { auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, type User } from '@/lib/firebase';
+import { auth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged, signOut, type User, firebase, getRedirectResult } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 const ALLOWED_EMAILS = [
@@ -19,6 +19,7 @@ interface AuthContextType {
   loginWithGoogle: () => void;
   logout: () => void;
   loading: boolean;
+  isLoggingIn: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -42,14 +44,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setLoading(false);
     });
+    
+    // Handle redirect result
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user && !ALLOWED_EMAILS.includes(result.user.email || '')) {
+          toast({
+            title: "Access Denied",
+            description: "This email address is not authorized to access the application.",
+            variant: "destructive",
+          });
+          signOut(auth);
+        }
+      })
+      .catch((error) => {
+        console.error("Error getting redirect result:", error);
+      })
+      .finally(() => {
+        setIsLoggingIn(false);
+      });
 
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const loginWithGoogle = async () => {
+    setIsLoggingIn(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
         console.error("Error signing in with Google:", error);
         toast({
@@ -57,6 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             description: error.message || "Could not sign in with Google. Please try again.",
             variant: "destructive",
           });
+        setIsLoggingIn(false);
     }
   };
 
@@ -78,14 +101,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!user;
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !isLoggingIn) {
       if (!isAuthenticated && pathname !== '/login') {
         router.push('/login');
       } else if (isAuthenticated && pathname === '/login') {
         router.push('/');
       }
     }
-  }, [isAuthenticated, loading, pathname, router]);
+  }, [isAuthenticated, loading, pathname, router, isLoggingIn]);
 
   if (loading) {
     return (
@@ -100,7 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loginWithGoogle, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, loginWithGoogle, logout, loading, isLoggingIn }}>
       {children}
     </AuthContext.Provider>
   );

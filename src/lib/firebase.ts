@@ -37,6 +37,7 @@ export type User = firebase.User;
 export type FirebaseApp = firebase.app.App;
 
 // Functions for context can be simplified since they are on the auth object
-export const signInWithPopup = (auth: firebase.auth.Auth, provider: firebase.auth.AuthProvider) => auth.signInWithPopup(provider);
+export const signInWithRedirect = (auth: firebase.auth.Auth, provider: firebase.auth.AuthProvider) => auth.signInWithRedirect(provider);
+export const getRedirectResult = (auth: firebase.auth.Auth) => auth.getRedirectResult();
 export const onAuthStateChanged = (auth: firebase.auth.Auth, nextOrObserver: any) => auth.onAuthStateChanged(nextOrObserver);
 export const signOut = (auth: firebase.auth.Auth) => auth.signOut();
