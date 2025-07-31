@@ -228,11 +228,10 @@ export const PointsTablePage: FC = () => {
     try {
         const batch = db.batch();
         
-        // Point values for each place
         const pointsMap: { [key: string]: number } = {
-            'firstPlace': 100,
-            'secondPlace': 50,
-            'thirdPlace': 25
+            firstPlace: 100,
+            secondPlace: 50,
+            thirdPlace: 25
         };
 
         const newResults: QuizResults = {
@@ -241,35 +240,34 @@ export const PointsTablePage: FC = () => {
             thirdPlace: thirdPlace,
         };
 
-        const pointChanges: { [studentId: string]: number } = {};
+        const pointChanges: Record<string, number> = {};
 
-        // Calculate points removed from old winners
-        if(dailyQuizResults) {
-            for(const [place, studentId] of Object.entries(dailyQuizResults)) {
-                if(studentId && newResults[place as keyof QuizResults] !== studentId) {
+        // Calculate points to remove from previous winners (if they changed)
+        if (dailyQuizResults) {
+            for (const [place, studentId] of Object.entries(dailyQuizResults)) {
+                if (studentId && newResults[place as keyof QuizResults] !== studentId) {
                     pointChanges[studentId] = (pointChanges[studentId] || 0) - pointsMap[place];
                 }
             }
         }
 
-        // Calculate points added for new winners
-        for(const [place, studentId] of Object.entries(newResults)) {
-            if(studentId && dailyQuizResults?.[place as keyof QuizResults] !== studentId) {
+        // Calculate points to add for new winners (if they changed)
+        for (const [place, studentId] of Object.entries(newResults)) {
+             if (studentId && dailyQuizResults?.[place as keyof QuizResults] !== studentId) {
                 pointChanges[studentId] = (pointChanges[studentId] || 0) + pointsMap[place];
             }
         }
         
-        // Apply point changes to student documents
-        for(const [studentId, change] of Object.entries(pointChanges)) {
+        // Apply point changes using the student data from state
+        for (const [studentId, change] of Object.entries(pointChanges)) {
             const studentRef = db.collection("students").doc(studentId);
-            const studentSnap = await studentRef.get();
-            if(studentSnap.exists) {
-                const currentPoints = studentSnap.data()?.quizPoints || 0;
-                batch.update(studentRef, { quizPoints: currentPoints + change });
+            const studentData = students.find(s => s.id === studentId);
+            if(studentData) {
+                 const currentPoints = studentData.quizPoints || 0;
+                 batch.update(studentRef, { quizPoints: currentPoints + change });
             }
         }
         
-        // Save the new quiz results for the day
         const quizResultsRef = db.collection("quizResults").doc(dateId);
         batch.set(quizResultsRef, newResults);
 
