@@ -67,61 +67,6 @@ export default function Home() {
     };
   }, [dateId]);
 
-  const studentsWithStatus = useMemo(() => {
-    const students = allStudents.map(student => ({
-      ...student,
-      status: todaysAttendance[student.id] || "Absent",
-    }));
-
-    const filtered = students.filter((student) => {
-      const term = searchTerm.toLowerCase();
-      return student.name.toLowerCase().includes(term);
-    });
-
-    const grouped: { [key: string]: Student[] } = filtered.reduce((acc, student) => {
-      const { class: studentClass } = student;
-      if (!acc[studentClass]) {
-        acc[studentClass] = [];
-      }
-      acc[studentClass].push(student);
-      return acc;
-    }, {} as { [key: string]: Student[] });
-
-    for (const studentClass in grouped) {
-      grouped[studentClass].sort((a, b) => a.name.localeCompare(b.name));
-    }
-    
-    return Object.keys(grouped).sort().reduce(
-      (obj, key) => { 
-        obj[key] = grouped[key]; 
-        return obj;
-      }, 
-      {} as {[key: string]: Student[]}
-    );
-
-  }, [allStudents, todaysAttendance, searchTerm]);
-
-  const handleStatusChange = async (studentId: string, status: "Present" | "Late" | "Absent") => {
-    const newStatus = { ...todaysAttendance };
-    
-    if (status === 'Absent') {
-        delete newStatus[studentId];
-    } else {
-        newStatus[studentId] = status;
-    }
-    
-    setTodaysAttendance(newStatus);
-    try {
-        const attendanceRef = doc(db, "attendance", dateId);
-        await setDoc(attendanceRef, newStatus);
-    } catch (error) {
-        toast({
-            title: "Error",
-            description: "Failed to update student status.",
-            variant: "destructive"
-        })
-    }
-  };
 
   if (loading || !isAuthenticated) {
     return null; // or a loading spinner
@@ -142,17 +87,6 @@ export default function Home() {
     { href: "/import-excel", icon: FileUp, title: "Import from Excel", description: "Bulk upload student data.", bg: "bg-slate-100", text: "text-slate-700" },
   ];
   
-  const getStatusClasses = (currentStatus?: AttendanceStatus, buttonStatus?: AttendanceStatus) => {
-    if (currentStatus === buttonStatus) {
-        switch(buttonStatus) {
-            case 'Present': return 'bg-teal-500 text-white hover:bg-teal-600';
-            case 'Late': return 'bg-amber-500 text-white hover:bg-amber-600';
-            case 'Absent': return 'bg-red-500 text-white hover:bg-red-600';
-        }
-    }
-    return 'bg-gray-200 text-gray-700 hover:bg-gray-300';
-  }
-
   return (
     <div className="flex flex-col flex-1">
       {/* Header */}
@@ -207,70 +141,6 @@ export default function Home() {
                         <p className="text-sm text-muted-foreground">Absent</p>
                     </div>
                 </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Attendance */}
-           <Card className="shadow-lg">
-            <CardHeader>
-              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                <div>
-                  <CardTitle className="text-2xl font-headline">Quick Attendance</CardTitle>
-                  <CardDescription>Quickly mark today's attendance. Current date: {format(date, "PPP")}</CardDescription>
-                </div>
-                <div className="relative w-full md:w-1/3">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search students..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-                 <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
-                    <Table>
-                      <TableHeader className="bg-slate-50 sticky top-0">
-                        <TableRow>
-                          <TableHead>Student Name</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {loading ? (
-                          <TableRow><TableCell colSpan={2} className="h-24 text-center">Loading...</TableCell></TableRow>
-                        ) : Object.keys(studentsWithStatus).length > 0 ? (
-                          Object.entries(studentsWithStatus).map(([className, students]) => (
-                            <>
-                              <TableRow key={`header-${className}`} className="bg-muted/50 hover:bg-muted/50 sticky top-12">
-                                <TableCell colSpan={2} className="font-bold text-primary text-base py-3">
-                                  Class: {className}
-                                </TableCell>
-                              </TableRow>
-                              {students.map((student) => (
-                                <TableRow key={student.id} className="hover:bg-slate-50/50">
-                                  <TableCell className="font-medium">{student.name}</TableCell>
-                                  <TableCell className="text-right space-x-2">
-                                    <Button size="sm" className={cn('px-2 sm:px-4', getStatusClasses(student.status, 'Present'))} onClick={() => handleStatusChange(student.id, 'Present')}>
-                                        <UserCheck className="h-4 w-4 md:mr-2" />
-                                        <span className="hidden md:inline">Present</span>
-                                    </Button>
-                                    <Button size="sm" className={cn('px-2 sm:px-4', getStatusClasses(student.status, 'Late'))} onClick={() => handleStatusChange(student.id, 'Late')}>
-                                        <Clock className="h-4 w-4 md:mr-2" />
-                                        <span className="hidden md:inline">Late</span>
-                                    </Button>
-                                    <Button size="sm" className={cn('px-2 sm:px-4', getStatusClasses(student.status, 'Absent'))} onClick={() => handleStatusChange(student.id, 'Absent')}>
-                                        <UserX className="h-4 w-4 md:mr-2" />
-                                        <span className="hidden md:inline">Absent</span>
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </>
-                          ))
-                        ) : (
-                          <TableRow><TableCell colSpan={2} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
             </CardContent>
           </Card>
           
