@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { UserPlus, Users, ClipboardCheck, Shuffle, FileUp, Trophy, LogOut, UserCheck, Clock, UserX, Calendar, Search, CalendarIcon } from 'lucide-react';
+import { UserPlus, Users, ClipboardCheck, Shuffle, FileUp, Trophy, LogOut, UserCheck, Clock, UserX, Calendar, Search, CalendarIcon, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useDate } from '@/context/DateContext';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 type AttendanceStatus = "Present" | "Late" | "Absent";
 type DailyAttendance = {
@@ -33,8 +34,9 @@ export default function Home() {
   const { selectedDate, setSelectedDate } = useDate();
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [todaysAttendance, setTodaysAttendance] = useState<DailyAttendance>({});
+  const { toast } = useToast();
   
-  const dateId = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
+  const dateId = useMemo(() => selectedDate ? format(selectedDate, "yyyy-MM-dd") : null, [selectedDate]);
 
   useEffect(() => {
     // Listener for all students
@@ -47,6 +49,16 @@ export default function Home() {
         setAllStudents(studentsList);
     });
 
+    return () => {
+        unsubStudents();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!dateId) {
+        setTodaysAttendance({});
+        return;
+    };
     // Listener for today's attendance
     const unsubAttendance = db.collection("attendance").doc(dateId).onSnapshot((docSnap) => {
         if(docSnap.exists) {
@@ -58,7 +70,6 @@ export default function Home() {
     });
 
     return () => {
-        unsubStudents();
         unsubAttendance();
     };
   }, [dateId]);
@@ -72,11 +83,11 @@ export default function Home() {
   const lateCount = Object.values(todaysAttendance).filter(s => s === 'Late').length;
   const totalStudents = allStudents.length;
   const absentCount = totalStudents > 0 ? totalStudents - presentCount - lateCount : 0;
-  const attendancePercentage = totalStudents > 0 ? Math.round(((presentCount + lateCount) / totalStudents) * 100) : 0;
+  const attendancePercentage = totalStudents > 0 && (presentCount + lateCount > 0) ? Math.round(((presentCount + lateCount) / totalStudents) * 100) : 0;
 
   const quickLinks = [
-    { href: "/attendance", icon: ClipboardCheck, title: "Full Attendance", description: "Go to detailed view.", bg: "bg-teal-100", text: "text-teal-700" },
-    { href: "/points-table", icon: Trophy, title: "Points Table", description: "View student leaderboard.", bg: "bg-amber-100", text: "text-amber-700" },
+    { href: "/attendance", icon: ClipboardCheck, title: "Full Attendance", description: "Go to detailed view.", bg: "bg-teal-100", text: "text-teal-700", requiresDate: true },
+    { href: "/points-table", icon: Trophy, title: "Points Table", description: "View student leaderboard.", bg: "bg-amber-100", text: "text-amber-700", requiresDate: true },
     { href: "/manage-students", icon: Users, title: "Manage Students", description: "Add, edit, or remove students.", bg: "bg-sky-100", text: "text-sky-700" },
     { href: "/team-shuffle", icon: Shuffle, title: "Team Shuffle", description: "Create random student teams.", bg: "bg-rose-100", text: "text-rose-700" },
     { href: "/add-student", icon: UserPlus, title: "Add Student", description: "Quickly add a new student.", bg: "bg-indigo-100", text: "text-indigo-700" },
@@ -84,6 +95,17 @@ export default function Home() {
   ];
   
   const isDayDisabled = (day: Date) => day.getDay() !== 6; // Disable all days except Saturday
+
+  const handleLinkClick = (e: React.MouseEvent, requiresDate: boolean | undefined) => {
+    if (requiresDate && !selectedDate) {
+      e.preventDefault();
+      toast({
+        title: "No Date Selected",
+        description: "Please select a date from the Global Date Selector first.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1">
@@ -109,36 +131,50 @@ export default function Home() {
           {/* Daily Challenge / Attendance Card */}
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="text-2xl font-headline">Attendance Summary for {format(selectedDate, "PPP")}</CardTitle>
-              <CardDescription>A summary of student attendance for the selected date.</CardDescription>
+              <CardTitle className="text-2xl font-headline">
+                {selectedDate ? `Attendance Summary for ${format(selectedDate, "PPP")}` : "Attendance Summary"}
+              </CardTitle>
+              <CardDescription>
+                {selectedDate ? "A summary of student attendance for the selected date." : "Please select a date to view the summary."}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="flex items-center gap-4 mb-4">
-                    <span className="text-5xl font-bold text-primary">{attendancePercentage}%</span>
-                    <div className="w-full">
-                        <p className="text-sm text-muted-foreground mb-1">Overall Attendance</p>
-                        <Progress value={attendancePercentage} className="h-3" />
+                {selectedDate ? (
+                  <>
+                    <div className="flex items-center gap-4 mb-4">
+                        <span className="text-5xl font-bold text-primary">{attendancePercentage}%</span>
+                        <div className="w-full">
+                            <p className="text-sm text-muted-foreground mb-1">Overall Attendance</p>
+                            <Progress value={attendancePercentage} className="h-3" />
+                        </div>
                     </div>
-                </div>
-                <Separator className="my-6" />
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div className="p-4 bg-slate-100 rounded-lg">
-                        <p className="text-2xl font-bold">{totalStudents}</p>
-                        <p className="text-sm text-muted-foreground">Total Students</p>
+                    <Separator className="my-6" />
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <div className="p-4 bg-slate-100 rounded-lg">
+                            <p className="text-2xl font-bold">{totalStudents}</p>
+                            <p className="text-sm text-muted-foreground">Total Students</p>
+                        </div>
+                        <div className="p-4 bg-green-100 rounded-lg">
+                            <p className="text-2xl font-bold text-green-700">{presentCount}</p>
+                            <p className="text-sm text-muted-foreground">Present</p>
+                        </div>
+                        <div className="p-4 bg-amber-100 rounded-lg">
+                            <p className="text-2xl font-bold text-amber-700">{lateCount}</p>
+                            <p className="text-sm text-muted-foreground">Late</p>
+                        </div>
+                        <div className="p-4 bg-red-100 rounded-lg">
+                            <p className="text-2xl font-bold text-red-700">{absentCount}</p>
+                            <p className="text-sm text-muted-foreground">Absent</p>
+                        </div>
                     </div>
-                    <div className="p-4 bg-green-100 rounded-lg">
-                        <p className="text-2xl font-bold text-green-700">{presentCount}</p>
-                        <p className="text-sm text-muted-foreground">Present</p>
+                  </>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground bg-slate-50/50 rounded-lg">
+                        <AlertCircle className="h-8 w-8 mb-2" />
+                        <p>No date selected.</p>
+                        <p className="text-sm">Use the Global Date Selector below to load attendance data.</p>
                     </div>
-                    <div className="p-4 bg-amber-100 rounded-lg">
-                        <p className="text-2xl font-bold text-amber-700">{lateCount}</p>
-                        <p className="text-sm text-muted-foreground">Late</p>
-                    </div>
-                    <div className="p-4 bg-red-100 rounded-lg">
-                        <p className="text-2xl font-bold text-red-700">{absentCount}</p>
-                        <p className="text-sm text-muted-foreground">Absent</p>
-                    </div>
-                </div>
+                )}
             </CardContent>
           </Card>
 
@@ -161,8 +197,8 @@ export default function Home() {
                 <PopoverContent className="w-auto p-0">
                   <CalendarComponent
                     mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
+                    selected={selectedDate || undefined}
+                    onSelect={(date) => setSelectedDate(date || null)}
                     disabled={isDayDisabled}
                     initialFocus
                   />
@@ -176,8 +212,8 @@ export default function Home() {
           {/* Action Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {quickLinks.map((link) => (
-                <Link href={link.href} key={link.href}>
-                    <Card className="h-full hover:shadow-xl transition-shadow cursor-pointer hover:-translate-y-1">
+                <Link href={link.href} key={link.href} onClick={(e) => handleLinkClick(e, link.requiresDate)}>
+                    <Card className={cn("h-full hover:shadow-xl transition-shadow hover:-translate-y-1", (link.requiresDate && !selectedDate) ? "cursor-not-allowed opacity-60" : "cursor-pointer")}>
                         <CardHeader className="flex flex-row items-center gap-4">
                             <div className={`p-3 rounded-lg ${link.bg}`}>
                                 <link.icon className={`h-6 w-6 ${link.text}`} />
@@ -210,7 +246,7 @@ export default function Home() {
                 </Button>
             </Link>
              <Link href="/points-table" passHref>
-                <Button variant="ghost" className="flex flex-col h-auto p-2 text-muted-foreground">
+                <Button variant="ghost" className="flex flex-col h-auto p-2 text-muted-foreground" onClick={(e) => handleLinkClick(e, true)}>
                     <Trophy className="h-6 w-6" />
                     <span className="text-xs mt-1">Points</span>
                 </Button>

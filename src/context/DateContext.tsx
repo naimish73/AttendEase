@@ -4,14 +4,14 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface DateContextType {
-  selectedDate: Date;
-  setSelectedDate: (date: Date) => void;
+  selectedDate: Date | null;
+  setSelectedDate: (date: Date | null) => void;
 }
 
 const DateContext = createContext<DateContextType | undefined>(undefined);
 
 export const DateProvider = ({ children }: { children: ReactNode }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   return (
     <DateContext.Provider value={{ selectedDate, setSelectedDate }}>

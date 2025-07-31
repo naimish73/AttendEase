@@ -43,12 +43,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { Medal, RotateCcw, Download, Trophy, ArrowUp, ArrowDown } from "lucide-react";
+import { Medal, RotateCcw, Download, Trophy, ArrowUp, ArrowDown, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { format } from "date-fns";
 import * as XLSX from 'xlsx';
 import { Input } from "./ui/input";
 import { useDate } from "@/context/DateContext";
+import Link from "next/link";
 
 type Student = {
   id: string;
@@ -152,6 +153,7 @@ export const PointsTablePage: FC = () => {
   }, [students, attendanceRecords]);
   
   const dailyStudentPoints = useMemo(() => {
+    if (!selectedDate) return [];
     const dateId = format(selectedDate, "yyyy-MM-dd");
     const dailyRecord = attendanceRecords[dateId] || {};
     
@@ -172,6 +174,7 @@ export const PointsTablePage: FC = () => {
 
 
   const availableForQuiz = useMemo(() => {
+    if (!selectedDate) return [];
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     const todaysAttendance = attendanceRecords[dateStr] || {};
     return students.filter(s => todaysAttendance[s.id] === 'Present' || todaysAttendance[s.id] === 'Late');
@@ -252,6 +255,7 @@ export const PointsTablePage: FC = () => {
         }));
         fileNameSuffix = 'overall';
     } else {
+        if (!selectedDate) return;
         dataToExport = dailyStudentPoints.map((s, index) => ({
             'Rank': index + 1,
             Name: s.name,
@@ -318,7 +322,7 @@ export const PointsTablePage: FC = () => {
                 </TableRow>
                 ))
             ) : (
-                <TableRow><TableCell colSpan={5} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center">No students found or no attendance data for this day.</TableCell></TableRow>
             )}
             </TableBody>
         </Table>
@@ -336,6 +340,25 @@ export const PointsTablePage: FC = () => {
   const scrollToBottom = () => {
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
+  
+  if (!selectedDate && activeTab === 'daily') {
+    return (
+        <Card className="w-full max-w-2xl mx-auto shadow-lg text-center">
+            <CardHeader>
+                <CardTitle>No Date Selected</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center min-h-[300px]">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">
+                    Please select a date on the dashboard to view the daily points table.
+                </p>
+                <Button asChild>
+                    <Link href="/">Back to Dashboard</Link>
+                </Button>
+            </CardContent>
+        </Card>
+    );
+  }
 
 
   return (
@@ -357,13 +380,13 @@ export const PointsTablePage: FC = () => {
                  <div className="flex gap-2 flex-wrap">
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button variant="outline"><Download className="mr-2 h-4 w-4" />Download</Button>
+                            <Button variant="outline" disabled={activeTab === 'daily' && !selectedDate}><Download className="mr-2 h-4 w-4" />Download</Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>Download Points Report</DialogTitle>
                                 <DialogDescription>
-                                    Enter a file name for the {activeTab === 'overall' ? 'overall' : `daily (${format(selectedDate, "PPP")})`} report.
+                                    Enter a file name for the {activeTab === 'overall' ? 'overall' : `daily (${selectedDate ? format(selectedDate, "PPP") : ''})`} report.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
@@ -384,69 +407,78 @@ export const PointsTablePage: FC = () => {
         <CardContent>
             <Tabs defaultValue="daily" onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-                    <TabsTrigger value="daily">Daily View ({format(selectedDate, "MMM d")})</TabsTrigger>
+                    <TabsTrigger value="daily">Daily View {selectedDate ? `(${format(selectedDate, "MMM d")})` : ''}</TabsTrigger>
                     <TabsTrigger value="overall">Overall Leaderboard</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overall" className="mt-4 space-y-4">
                     {renderTable(overallStudentPoints)}
                 </TabsContent>
                 <TabsContent value="daily" className="mt-4">
-                     <div className="flex flex-wrap gap-4 mb-4 items-center">
-                        <Dialog>
-                            <DialogTrigger asChild><Button><Medal className="mr-2 h-4 w-4" />Log Quiz Results</Button></DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Log Quiz Winners for {format(selectedDate, "PPP")}</DialogTitle>
-                                    <DialogDescription>Select the top 3 performers. Only students present on this day are available.</DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="first-place" className="text-right">1st Place (+100)</Label>
-                                        <Select value={firstPlace} onValueChange={setFirstPlace}>
-                                            <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Winner" /></SelectTrigger>
-                                            <SelectContent>{firstPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="second-place" className="text-right">2nd Place (+50)</Label>
-                                         <Select value={secondPlace} onValueChange={setSecondPlace}>
-                                            <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Runner-up" /></SelectTrigger>
-                                            <SelectContent>{secondPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="third-place" className="text-right">3rd Place (+25)</Label>
-                                         <Select value={thirdPlace} onValueChange={setThirdPlace}>
-                                            <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Third Place" /></SelectTrigger>
-                                            <SelectContent>{thirdPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                                    <DialogClose asChild><Button onClick={handleLogQuizResults} disabled={!firstPlace && !secondPlace && !thirdPlace}>Award Points</Button></DialogClose>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="outline"><RotateCcw className="mr-2 h-4 w-4" />Reset Quiz Points</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This will reset all quiz points for every student to zero. This action cannot be undone.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleResetAllPoints}>Continue</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
-                    {renderTable(dailyStudentPoints)}
+                    {selectedDate ? (
+                        <>
+                            <div className="flex flex-wrap gap-4 mb-4 items-center">
+                                <Dialog>
+                                    <DialogTrigger asChild><Button disabled={availableForQuiz.length === 0}><Medal className="mr-2 h-4 w-4" />Log Quiz Results</Button></DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Log Quiz Winners for {format(selectedDate, "PPP")}</DialogTitle>
+                                            <DialogDescription>Select the top 3 performers. Only students present on this day are available.</DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid gap-4 py-4">
+                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                <Label htmlFor="first-place" className="text-right">1st Place (+100)</Label>
+                                                <Select value={firstPlace} onValueChange={setFirstPlace}>
+                                                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Winner" /></SelectTrigger>
+                                                    <SelectContent>{firstPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                <Label htmlFor="second-place" className="text-right">2nd Place (+50)</Label>
+                                                <Select value={secondPlace} onValueChange={setSecondPlace}>
+                                                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Runner-up" /></SelectTrigger>
+                                                    <SelectContent>{secondPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="grid grid-cols-4 items-center gap-4">
+                                                <Label htmlFor="third-place" className="text-right">3rd Place (+25)</Label>
+                                                <Select value={thirdPlace} onValueChange={setThirdPlace}>
+                                                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select Third Place" /></SelectTrigger>
+                                                    <SelectContent>{thirdPlaceOptions.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <DialogFooter>
+                                            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                                            <DialogClose asChild><Button onClick={handleLogQuizResults} disabled={!firstPlace && !secondPlace && !thirdPlace}>Award Points</Button></DialogClose>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="outline"><RotateCcw className="mr-2 h-4 w-4" />Reset Quiz Points</Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will reset all quiz points for every student to zero. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleResetAllPoints}>Continue</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                            {renderTable(dailyStudentPoints)}
+                        </>
+                    ) : (
+                        <div className="text-center py-12 text-muted-foreground">
+                            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                            <p>Please select a date from the dashboard to view daily points.</p>
+                        </div>
+                    )}
                 </TabsContent>
             </Tabs>
         </CardContent>

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect, useCallback } from "react";
-import { Download, Search, RotateCcw, UserCheck, Clock, ClipboardCheck, UserX, Users, ArrowUp, ArrowDown } from "lucide-react";
+import { Download, Search, RotateCcw, UserCheck, Clock, ClipboardCheck, UserX, Users, ArrowUp, ArrowDown, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useDate } from "@/context/DateContext";
+import Link from "next/link";
 
 type AttendanceStatus = "Present" | "Late" | "Absent";
 type Student = {
@@ -83,7 +84,7 @@ const ExportDialog: FC<ExportDialogProps> = ({ students, date }) => {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline"><Download className="mr-2 h-4 w-4" />Export XLS</Button>
+                <Button variant="outline" disabled={!students || students.length === 0}><Download className="mr-2 h-4 w-4" />Export XLS</Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
@@ -115,7 +116,7 @@ export const AttendancePage: FC = () => {
   const [dailyStatus, setDailyStatus] = useState<DailyAttendance>({});
   const [showScrollButtons, setShowScrollButtons] = useState(false);
 
-  const dateId = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
+  const dateId = useMemo(() => selectedDate ? format(selectedDate, "yyyy-MM-dd") : null, [selectedDate]);
 
   const handleScroll = useCallback(() => {
     if (window.scrollY > 300) {
@@ -132,20 +133,34 @@ export const AttendancePage: FC = () => {
     };
   }, [handleScroll]);
 
-
-  const fetchStudentsAndAttendance = useCallback(async () => {
+  useEffect(() => {
     setLoading(true);
-
     const studentsCollection = db.collection("students");
-    const studentsSnapshot = await studentsCollection.get();
-    const studentsList = studentsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Student[];
-    setStudents(studentsList);
+    const unsubStudents = studentsCollection.onSnapshot((snapshot) => {
+        const studentsList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Student[];
+        setStudents(studentsList);
+        if (!dateId) setLoading(false);
+    }, (error) => {
+        console.error("Error fetching students: ", error);
+        toast({ title: "Error", description: "Could not load student data.", variant: "destructive" });
+        setLoading(false);
+    });
 
-    const dateDocId = format(selectedDate, "yyyy-MM-dd");
-    const attendanceRef = db.collection("attendance").doc(dateDocId);
+    return () => unsubStudents();
+  }, [toast, dateId]);
+
+
+  useEffect(() => {
+    if (!dateId) {
+        setDailyStatus({});
+        setLoading(false);
+        return;
+    }
+    setLoading(true);
+    const attendanceRef = db.collection("attendance").doc(dateId);
     const unsubAttendance = attendanceRef.onSnapshot((docSnap) => {
       if (docSnap.exists) {
           setDailyStatus(docSnap.data() as DailyAttendance);
@@ -160,14 +175,7 @@ export const AttendancePage: FC = () => {
     });
 
     return () => unsubAttendance();
-  }, [selectedDate, toast]);
-  
-  useEffect(() => {
-    const unsubscribePromise = fetchStudentsAndAttendance();
-    return () => {
-      unsubscribePromise.then(unsub => unsub && unsub());
-    };
-  }, [fetchStudentsAndAttendance]);
+  }, [dateId, toast]);
 
   const studentsWithStatus = useMemo(() => {
     return students.map(student => ({
@@ -181,6 +189,8 @@ export const AttendancePage: FC = () => {
   const absentCount = students.length - presentCount - lateCount;
 
   const handleStatusChange = async (studentId: string, status: "Present" | "Late" | "Absent") => {
+    if (!dateId) return;
+
     const newStatus = { ...dailyStatus };
     
     if (status === 'Absent') {
@@ -203,6 +213,7 @@ export const AttendancePage: FC = () => {
   };
 
   const handleResetAll = async () => {
+    if (!dateId) return;
     if (students.length === 0) {
       toast({ title: "No Students", description: "There are no students to reset." });
       return;
@@ -213,7 +224,7 @@ export const AttendancePage: FC = () => {
       setDailyStatus({});
       toast({
         title: "Success",
-        description: `Attendance for ${format(selectedDate, "PPP")} has been reset.`,
+        description: `Attendance for ${format(selectedDate!, "PPP")} has been reset.`,
       });
     } catch (error) {
       toast({
@@ -245,12 +256,10 @@ export const AttendancePage: FC = () => {
       return acc;
     }, {} as { [key: string]: Student[] });
 
-    // Sort students within each group by name
     for (const studentClass in grouped) {
       grouped[studentClass].sort((a, b) => a.name.localeCompare(b.name));
     }
     
-    // Sort the class groups by class name
     const sortedGrouped = Object.keys(grouped).sort().reduce(
       (obj, key) => { 
         obj[key] = grouped[key]; 
@@ -280,6 +289,25 @@ export const AttendancePage: FC = () => {
   const scrollToBottom = () => {
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
+  
+  if (!selectedDate) {
+    return (
+        <Card className="w-full max-w-2xl mx-auto shadow-lg text-center">
+            <CardHeader>
+                <CardTitle>No Date Selected</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center min-h-[300px]">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">
+                    Please select a date on the dashboard to view attendance.
+                </p>
+                <Button asChild>
+                    <Link href="/">Back to Dashboard</Link>
+                </Button>
+            </CardContent>
+        </Card>
+    );
+  }
 
   return (
     <>
