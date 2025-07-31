@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, type FC, useEffect, useCallback } from "react";
-import { Download, Search, RotateCcw, UserCheck, Clock, CalendarIcon, ClipboardCheck, UserX, Users, ArrowUp, ArrowDown } from "lucide-react";
+import { Download, Search, RotateCcw, UserCheck, Clock, ClipboardCheck, UserX, Users, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,9 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import * as XLSX from 'xlsx';
-import { Separator } from "./ui/separator";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Calendar } from "./ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useDate } from "@/context/DateContext";
 
 type AttendanceStatus = "Present" | "Late" | "Absent";
 type Student = {
@@ -113,7 +111,7 @@ export const AttendancePage: FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const { selectedDate } = useDate();
   const [dailyStatus, setDailyStatus] = useState<DailyAttendance>({});
   const [showScrollButtons, setShowScrollButtons] = useState(false);
 
@@ -275,8 +273,6 @@ export const AttendancePage: FC = () => {
     return 'bg-gray-200 text-gray-700 hover:bg-gray-300';
   }
 
-  const isDayDisabled = (day: Date) => day.getDay() !== 6;
-
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -298,7 +294,7 @@ export const AttendancePage: FC = () => {
                     <span>Take Attendance</span>
                 </CardTitle>
                 <CardDescription className="mt-2">
-                    Mark and view student attendance for a specific date.
+                    Viewing and marking attendance for <span className="font-semibold text-primary">{format(selectedDate, "PPP")}</span>.
                 </CardDescription>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -322,26 +318,6 @@ export const AttendancePage: FC = () => {
           </div>
           <div className="flex flex-col md:flex-row gap-4 justify-between items-center pt-6">
             <div className="flex flex-col sm:flex-row flex-1 w-full md:w-auto gap-4 items-center">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    disabled={isDayDisabled}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search students..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full" />

@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { UserPlus, Users, ClipboardCheck, Shuffle, FileUp, Trophy, LogOut, UserCheck, Clock, UserX, Calendar, Search } from 'lucide-react';
+import { UserPlus, Users, ClipboardCheck, Shuffle, FileUp, Trophy, LogOut, UserCheck, Clock, UserX, Calendar, Search, CalendarIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,10 @@ import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { useDate } from '@/context/DateContext';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 
 type AttendanceStatus = "Present" | "Late" | "Absent";
 type DailyAttendance = {
@@ -30,13 +30,11 @@ type Student = {
 
 export default function Home() {
   const { isAuthenticated, loading, logout } = useAuth();
+  const { selectedDate, setSelectedDate } = useDate();
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [todaysAttendance, setTodaysAttendance] = useState<DailyAttendance>({});
-  const [date, setDate] = useState(new Date());
-  const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
   
-  const dateId = useMemo(() => format(date, "yyyy-MM-dd"), [date]);
+  const dateId = useMemo(() => format(selectedDate, "yyyy-MM-dd"), [selectedDate]);
 
   useEffect(() => {
     // Listener for all students
@@ -85,6 +83,8 @@ export default function Home() {
     { href: "/import-excel", icon: FileUp, title: "Import from Excel", description: "Bulk upload student data.", bg: "bg-slate-100", text: "text-slate-700" },
   ];
   
+  const isDayDisabled = (day: Date) => day.getDay() !== 6; // Disable all days except Saturday
+
   return (
     <div className="flex flex-col flex-1">
       {/* Header */}
@@ -96,7 +96,7 @@ export default function Home() {
           </Avatar>
           <div>
             <h1 className="text-xl font-bold font-headline">Hello, Admin</h1>
-            <p className="text-muted-foreground text-sm">Today is {format(date, "EEEE, d MMMM yyyy")}</p>
+            <p className="text-muted-foreground text-sm">Today is {format(new Date(), "EEEE, d MMMM yyyy")}</p>
           </div>
         </div>
          <Button variant="ghost" size="icon" onClick={logout}>
@@ -109,8 +109,8 @@ export default function Home() {
           {/* Daily Challenge / Attendance Card */}
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="text-2xl font-headline">Today's Attendance Summary</CardTitle>
-              <CardDescription>A summary of student attendance for today.</CardDescription>
+              <CardTitle className="text-2xl font-headline">Attendance Summary for {format(selectedDate, "PPP")}</CardTitle>
+              <CardDescription>A summary of student attendance for the selected date.</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="flex items-center gap-4 mb-4">
@@ -139,6 +139,35 @@ export default function Home() {
                         <p className="text-sm text-muted-foreground">Absent</p>
                     </div>
                 </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle>Global Date Selector</CardTitle>
+                <CardDescription>Select a date to view attendance and points for that day across the app.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    disabled={isDayDisabled}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </CardContent>
           </Card>
           

@@ -43,16 +43,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { Medal, RotateCcw, Calendar as CalendarIcon, Download, Trophy, ArrowUp, ArrowDown } from "lucide-react";
+import { Medal, RotateCcw, Download, Trophy, ArrowUp, ArrowDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Calendar } from "./ui/calendar";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import { Input } from "./ui/input";
+import { useDate } from "@/context/DateContext";
 
-type AttendanceStatus = "Present" | "Absent" | "Late";
 type Student = {
   id: string;
   name: string;
@@ -74,8 +71,8 @@ export const PointsTablePage: FC = () => {
   const [secondPlace, setSecondPlace] = useState<string | undefined>();
   const [thirdPlace, setThirdPlace] = useState<string | undefined>();
 
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [activeTab, setActiveTab] = useState("overall");
+  const { selectedDate } = useDate();
+  const [activeTab, setActiveTab] = useState("daily");
   const [exportFileName, setExportFileName] = useState("");
   const [showScrollButtons, setShowScrollButtons] = useState(false);
 
@@ -175,10 +172,10 @@ export const PointsTablePage: FC = () => {
 
 
   const availableForQuiz = useMemo(() => {
-    const todayStr = format(new Date(), "yyyy-MM-dd");
-    const todaysAttendance = attendanceRecords[todayStr] || {};
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const todaysAttendance = attendanceRecords[dateStr] || {};
     return students.filter(s => todaysAttendance[s.id] === 'Present' || todaysAttendance[s.id] === 'Late');
-  }, [students, attendanceRecords]);
+  }, [students, attendanceRecords, selectedDate]);
   
   const handleLogQuizResults = async () => {
     const winners = [firstPlace, secondPlace, thirdPlace].filter(Boolean);
@@ -286,10 +283,7 @@ export const PointsTablePage: FC = () => {
     setExportFileName("");
   };
 
-
-  const isDayDisabled = (day: Date) => day.getDay() !== 6;
-
-  const renderTable = (data: typeof overallStudentPoints, isDaily: boolean) => (
+  const renderTable = (data: typeof overallStudentPoints) => (
     <div className="border rounded-lg overflow-hidden">
         <Table>
             <TableHeader className="bg-slate-50">
@@ -388,42 +382,22 @@ export const PointsTablePage: FC = () => {
             </div>
         </CardHeader>
         <CardContent>
-            <Tabs defaultValue="overall" onValueChange={setActiveTab}>
+            <Tabs defaultValue="daily" onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
+                    <TabsTrigger value="daily">Daily View ({format(selectedDate, "MMM d")})</TabsTrigger>
                     <TabsTrigger value="overall">Overall Leaderboard</TabsTrigger>
-                    <TabsTrigger value="daily">Daily View</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overall" className="mt-4 space-y-4">
-                    {renderTable(overallStudentPoints, false)}
+                    {renderTable(overallStudentPoints)}
                 </TabsContent>
                 <TabsContent value="daily" className="mt-4">
                      <div className="flex flex-wrap gap-4 mb-4 items-center">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn("w-full sm:w-auto justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={(date) => date && setSelectedDate(date)}
-                                disabled={isDayDisabled}
-                                initialFocus
-                            />
-                            </PopoverContent>
-                        </Popover>
                         <Dialog>
                             <DialogTrigger asChild><Button><Medal className="mr-2 h-4 w-4" />Log Quiz Results</Button></DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Log Quiz Winners</DialogTitle>
-                                    <DialogDescription>Select the top 3 performers. Only students present today are available.</DialogDescription>
+                                    <DialogTitle>Log Quiz Winners for {format(selectedDate, "PPP")}</DialogTitle>
+                                    <DialogDescription>Select the top 3 performers. Only students present on this day are available.</DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4">
                                     <div className="grid grid-cols-4 items-center gap-4">
@@ -472,7 +446,7 @@ export const PointsTablePage: FC = () => {
                             </AlertDialogContent>
                         </AlertDialog>
                     </div>
-                    {renderTable(dailyStudentPoints, true)}
+                    {renderTable(dailyStudentPoints)}
                 </TabsContent>
             </Tabs>
         </CardContent>

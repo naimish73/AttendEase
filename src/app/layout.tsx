@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/AuthContext';
+import { DateProvider } from '@/context/DateContext';
 
 export const metadata: Metadata = {
   title: 'AttendEase',
@@ -22,7 +23,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
-          {children}
+          <DateProvider>
+            {children}
+          </DateProvider>
         </AuthProvider>
         <Toaster />
       </body>
