@@ -62,12 +62,6 @@ type DailyAttendance = {
     [studentId: string]: "Present" | "Late";
 }
 
-type QuizResults = {
-    firstPlace?: string;
-    secondPlace?: string;
-    thirdPlace?: string;
-}
-
 export const PointsTablePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, DailyAttendance>>({});
@@ -77,7 +71,6 @@ export const PointsTablePage: FC = () => {
   const [firstPlace, setFirstPlace] = useState<string | undefined>();
   const [secondPlace, setSecondPlace] = useState<string | undefined>();
   const [thirdPlace, setThirdPlace] = useState<string | undefined>();
-  const [dailyQuizResults, setDailyQuizResults] = useState<QuizResults | null>(null);
 
 
   const { selectedDate } = useDate();
@@ -144,34 +137,6 @@ export const PointsTablePage: FC = () => {
     };
   }, [fetchStudents, fetchAttendance]);
 
-  useEffect(() => {
-    if (!dateId) {
-      setDailyQuizResults(null);
-      setFirstPlace(undefined);
-      setSecondPlace(undefined);
-      setThirdPlace(undefined);
-      return;
-    };
-    
-    const quizResultsRef = db.collection("quizResults").doc(dateId);
-    const unsubQuizResults = quizResultsRef.onSnapshot((doc) => {
-        if(doc.exists) {
-            const data = doc.data() as QuizResults;
-            setDailyQuizResults(data);
-            setFirstPlace(data.firstPlace);
-            setSecondPlace(data.secondPlace);
-            setThirdPlace(data.thirdPlace);
-        } else {
-            setDailyQuizResults(null);
-            setFirstPlace(undefined);
-            setSecondPlace(undefined);
-            setThirdPlace(undefined);
-        }
-    });
-
-    return () => unsubQuizResults();
-
-  }, [dateId]);
   
   const overallStudentPoints = useMemo(() => {
     return students.map(student => {
@@ -230,46 +195,30 @@ export const PointsTablePage: FC = () => {
     
     try {
         const batch = db.batch();
-        const pointsMap: { [key: string]: number } = { firstPlace: 100, secondPlace: 50, thirdPlace: 25 };
-        
-        const newResults: QuizResults = {
-            firstPlace: firstPlace,
-            secondPlace: secondPlace,
-            thirdPlace: thirdPlace,
+        const pointsMap: { [key: string]: number } = {
+            firstPlace: 100,
+            secondPlace: 50,
+            thirdPlace: 25,
         };
-
-        const pointChanges: Record<string, number> = {};
-
-        // Calculate points from old results
-        if (dailyQuizResults) {
-            for (const [place, studentId] of Object.entries(dailyQuizResults)) {
-                if (studentId) {
-                    pointChanges[studentId] = (pointChanges[studentId] || 0) - pointsMap[place];
+        const newWinners = { firstPlace, secondPlace, thirdPlace };
+        
+        for (const [place, studentId] of Object.entries(newWinners)) {
+            if (studentId) {
+                const studentRef = db.collection("students").doc(studentId);
+                const studentData = students.find(s => s.id === studentId);
+                if (studentData) {
+                    const currentPoints = studentData.quizPoints || 0;
+                    batch.update(studentRef, { quizPoints: currentPoints + pointsMap[place] });
                 }
             }
         }
         
-        // Calculate points from new results
-        for (const [place, studentId] of Object.entries(newResults)) {
-            if (studentId) {
-                pointChanges[studentId] = (pointChanges[studentId] || 0) + pointsMap[place];
-            }
-        }
-
-        // Apply the point changes
-        for (const [studentId, change] of Object.entries(pointChanges)) {
-            const studentData = students.find(s => s.id === studentId);
-            if (studentData) {
-                const studentRef = db.collection("students").doc(studentId);
-                const currentPoints = studentData.quizPoints || 0;
-                batch.update(studentRef, { quizPoints: currentPoints + change });
-            }
-        }
-
-        const quizResultsRef = db.collection("quizResults").doc(dateId);
-        batch.set(quizResultsRef, newResults);
-
         await batch.commit();
+        
+        // Reset selections
+        setFirstPlace(undefined);
+        setSecondPlace(undefined);
+        setThirdPlace(undefined);
 
         toast({ title: "Quiz Results Logged", description: "Points have been awarded and updated successfully." });
     } catch (error) {
@@ -542,7 +491,7 @@ export const PointsTablePage: FC = () => {
                                         <AlertDialogHeader>
                                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This will reset all quiz points for every student to zero. This action cannot be undone.
+                                            This action cannot be undone. This will reset all quiz points for every student to zero. This action cannot be undone.
                                         </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
