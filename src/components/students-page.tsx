@@ -32,8 +32,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { db, storage } from "@/lib/firebase";
-import { collection, onSnapshot, doc, deleteDoc, query, getDocs, writeBatch } from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
 import Link from "next/link";
 import { Input } from "./ui/input";
 
@@ -68,10 +66,9 @@ export const StudentsPage: FC = () => {
   }, [handleScroll]);
 
   useEffect(() => {
-    const studentsCollection = collection(db, "students");
-    const q = query(studentsCollection);
+    const studentsCollection = db.collection("students");
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribe = studentsCollection.onSnapshot((querySnapshot) => {
       const studentsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -103,13 +100,13 @@ export const StudentsPage: FC = () => {
 
   const handleDeleteStudent = async (studentId: string, imageUrl?: string) => {
     try {
-        const studentRef = doc(db, "students", studentId);
-        await deleteDoc(studentRef);
+        const studentRef = db.collection("students").doc(studentId);
+        await studentRef.delete();
 
         if (imageUrl && !imageUrl.includes('placehold.co')) {
             try {
-                const imageRef = ref(storage, imageUrl);
-                await deleteObject(imageRef);
+                const imageRef = storage.refFromURL(imageUrl);
+                await imageRef.delete();
             } catch (error) {
                 // image might not exist, so we can ignore this error
             }
@@ -138,18 +135,18 @@ export const StudentsPage: FC = () => {
       return;
     }
     try {
-      const studentsCollection = collection(db, "students");
-      const querySnapshot = await getDocs(studentsCollection);
+      const studentsCollection = db.collection("students");
+      const querySnapshot = await studentsCollection.get();
       
-      const batch = writeBatch(db);
+      const batch = db.batch();
       const deletePromises: Promise<void>[] = [];
 
       querySnapshot.docs.forEach((doc) => {
         batch.delete(doc.ref);
         const studentData = doc.data() as Student;
         if (studentData.imageUrl && !studentData.imageUrl.includes('placehold.co')) {
-            const imageRef = ref(storage, studentData.imageUrl);
-            deletePromises.push(deleteObject(imageRef).catch(err => {
+            const imageRef = storage.refFromURL(studentData.imageUrl);
+            deletePromises.push(imageRef.delete().catch(err => {
               // Log error if a single image fails to delete, but don't block the whole process
               console.error(`Failed to delete image for ${studentData.name}: ${studentData.imageUrl}`, err);
             }));

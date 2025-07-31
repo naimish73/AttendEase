@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, collection, query, setDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
@@ -41,9 +40,8 @@ export default function Home() {
 
   useEffect(() => {
     // Listener for all students
-    const studentsCollection = collection(db, "students");
-    const q = query(studentsCollection);
-    const unsubStudents = onSnapshot(q, (querySnapshot) => {
+    const studentsCollection = db.collection("students");
+    const unsubStudents = studentsCollection.onSnapshot((querySnapshot) => {
         const studentsList = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
@@ -52,8 +50,8 @@ export default function Home() {
     });
 
     // Listener for today's attendance
-    const unsubAttendance = onSnapshot(doc(db, "attendance", dateId), (docSnap) => {
-        if(docSnap.exists()) {
+    const unsubAttendance = db.collection("attendance").doc(dateId).onSnapshot((docSnap) => {
+        if(docSnap.exists) {
             const data = docSnap.data() as DailyAttendance;
             setTodaysAttendance(data);
         } else {

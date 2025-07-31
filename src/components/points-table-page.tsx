@@ -43,7 +43,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, doc, writeBatch, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { Medal, RotateCcw, Calendar as CalendarIcon, Download, Trophy, ArrowUp, ArrowDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -96,9 +95,8 @@ export const PointsTablePage: FC = () => {
   }, [handleScroll]);
 
   const fetchStudents = useCallback(() => {
-    const studentsCollection = collection(db, "students");
-    const studentsQuery = query(studentsCollection);
-    return onSnapshot(studentsQuery, (querySnapshot) => {
+    const studentsCollection = db.collection("students");
+    return studentsCollection.onSnapshot((querySnapshot) => {
       const studentsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -111,9 +109,8 @@ export const PointsTablePage: FC = () => {
   }, [toast]);
   
   const fetchAttendance = useCallback(() => {
-    const attendanceCollection = collection(db, "attendance");
-    const attendanceQuery = query(attendanceCollection);
-    return onSnapshot(attendanceQuery, (querySnapshot) => {
+    const attendanceCollection = db.collection("attendance");
+    return attendanceCollection.onSnapshot((querySnapshot) => {
         const records: Record<string, DailyAttendance> = {};
         querySnapshot.forEach(doc => {
             records[doc.id] = doc.data() as DailyAttendance;
@@ -121,7 +118,7 @@ export const PointsTablePage: FC = () => {
         setAttendanceRecords(records);
         setLoading(false);
     }, (error) => {
-        console.error("Error fetching attendance: ", error);
+        console.error("Error fetching attendance records: ", error);
         toast({ title: "Error fetching attendance records", variant: "destructive" });
         setLoading(false);
     });
@@ -191,7 +188,7 @@ export const PointsTablePage: FC = () => {
     }
 
     try {
-        const batch = writeBatch(db);
+        const batch = db.batch();
         const pointsToAdd = [
             { id: firstPlace, points: 100 },
             { id: secondPlace, points: 50 },
@@ -200,10 +197,10 @@ export const PointsTablePage: FC = () => {
 
         for (const winner of pointsToAdd) {
             if (winner.id) {
-                const studentRef = doc(db, "students", winner.id);
-                const studentSnap = await getDoc(studentRef);
-                if (studentSnap.exists()) {
-                    const currentPoints = studentSnap.data().quizPoints || 0;
+                const studentRef = db.collection("students").doc(winner.id);
+                const studentSnap = await studentRef.get();
+                if (studentSnap.exists) {
+                    const currentPoints = studentSnap.data()?.quizPoints || 0;
                     batch.update(studentRef, { quizPoints: currentPoints + winner.points });
                 }
             }
@@ -224,10 +221,10 @@ export const PointsTablePage: FC = () => {
   
   const handleResetAllPoints = async () => {
     try {
-        const batch = writeBatch(db);
+        const batch = db.batch();
         students.forEach(s => {
             if (s.quizPoints && s.quizPoints > 0) {
-                const studentRef = doc(db, "students", s.id);
+                const studentRef = db.collection("students").doc(s.id);
                 batch.update(studentRef, { quizPoints: 0 });
             }
         });

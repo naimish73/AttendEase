@@ -13,7 +13,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, doc } from "firebase/firestore";
 import { RotateCcw, Shuffle, Users } from "lucide-react";
 import { Label } from "./ui/label";
 import { format } from "date-fns";
@@ -28,7 +27,7 @@ type Student = {
 };
 
 type DailyAttendance = {
-    [studentId: string]: AttendanceStatus;
+    [studentId: string]: "Present" | "Late";
 }
 
 
@@ -42,10 +41,9 @@ export const TeamShufflePage: FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    const studentsCollection = collection(db, "students");
-    const q = query(studentsCollection);
+    const studentsCollection = db.collection("students");
 
-    const unsubStudents = onSnapshot(q, (querySnapshot) => {
+    const unsubStudents = studentsCollection.onSnapshot((querySnapshot) => {
       const studentsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -57,9 +55,9 @@ export const TeamShufflePage: FC = () => {
     });
     
     const todayId = format(new Date(), "yyyy-MM-dd");
-    const attendanceRef = doc(db, "attendance", todayId);
-    const unsubAttendance = onSnapshot(attendanceRef, (docSnap) => {
-        if(docSnap.exists()) {
+    const attendanceRef = db.collection("attendance").doc(todayId);
+    const unsubAttendance = attendanceRef.onSnapshot((docSnap) => {
+        if(docSnap.exists) {
             setTodaysAttendance(docSnap.data() as DailyAttendance);
         } else {
             setTodaysAttendance({});

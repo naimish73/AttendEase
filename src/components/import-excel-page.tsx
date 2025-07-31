@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, writeBatch, doc, getDocs, query, where, setDoc } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { Progress } from "./ui/progress";
 import { FileUp, CheckCircle, AlertCircle } from "lucide-react";
@@ -80,8 +79,8 @@ export const ImportExcelPage: FC = () => {
                 let failedCount = 0;
                 let duplicateCount = 0;
                 
-                const studentsRef = collection(db, "students");
-                const existingStudentsSnap = await getDocs(studentsRef);
+                const studentsRef = db.collection("students");
+                const existingStudentsSnap = await studentsRef.get();
                 const existingStudents = new Set(existingStudentsSnap.docs.map(d => {
                     const data = d.data();
                     return `${String(data.name).toLowerCase()}_${String(data.mobile || '')}`;
@@ -90,7 +89,7 @@ export const ImportExcelPage: FC = () => {
                 const dateColumns = Object.keys(json[0] || {}).filter(key => isValidDateString(key));
                 const attendanceUpdates: Record<string, Record<string, AttendanceStatus>> = {};
                 
-                const batch = writeBatch(db);
+                const batch = db.batch();
                 const newStudentsForAttendance = new Map<string, string>(); // Maps unique key to new student ID
 
                 for (const [index, row] of json.entries()) {
@@ -111,7 +110,7 @@ export const ImportExcelPage: FC = () => {
                         continue; // Skip this duplicate row
                     }
 
-                    const newStudentRef = doc(studentsRef);
+                    const newStudentRef = studentsRef.doc();
                     const studentId = newStudentRef.id;
                     const studentData = { name: studentName, class: studentClass, mobile: studentMobile, quizPoints };
                     batch.set(newStudentRef, studentData);
@@ -132,7 +131,7 @@ export const ImportExcelPage: FC = () => {
                 await batch.commit();
                 
                 // Fetch all students again to update attendance for existing ones not in this batch
-                const allStudentsSnap = await getDocs(studentsRef);
+                const allStudentsSnap = await studentsRef.get();
                 const allStudentsMap = new Map(allStudentsSnap.docs.map(d => {
                     const data = d.data();
                     const key = `${String(data.name).toLowerCase()}_${String(data.mobile || '')}`;
@@ -158,9 +157,9 @@ export const ImportExcelPage: FC = () => {
                     }
                 }
 
-                const attendanceBatch = writeBatch(db);
+                const attendanceBatch = db.batch();
                 for(const [date, statuses] of Object.entries(finalAttendanceUpdates)) {
-                    const attendanceRef = doc(db, 'attendance', date);
+                    const attendanceRef = db.collection('attendance').doc(date);
                     attendanceBatch.set(attendanceRef, statuses, { merge: true });
                 }
                 await attendanceBatch.commit();

@@ -24,7 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { useRouter } from "next/navigation";
 import { UserCog } from "lucide-react";
@@ -60,16 +59,18 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
   useEffect(() => {
     const fetchStudentData = async () => {
         try {
-            const studentRef = doc(db, "students", studentId);
-            const studentSnap = await getDoc(studentRef);
+            const studentRef = db.collection("students").doc(studentId);
+            const studentSnap = await studentRef.get();
 
-            if (studentSnap.exists()) {
+            if (studentSnap.exists) {
                 const studentData = studentSnap.data();
-                form.reset({
-                    name: studentData.name,
-                    class: studentData.class,
-                    mobile: studentData.mobile || "",
-                });
+                if (studentData) {
+                    form.reset({
+                        name: studentData.name,
+                        class: studentData.class,
+                        mobile: studentData.mobile || "",
+                    });
+                }
             } else {
                 toast({
                     title: "Error",
@@ -94,9 +95,9 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
   const onSubmit = async (data: StudentFormValues) => {
     setIsSubmitting(true);
     try {
-      const studentRef = doc(db, "students", studentId);
+      const studentRef = db.collection("students").doc(studentId);
       
-      await updateDoc(studentRef, {
+      await studentRef.update({
         ...data,
       });
 

@@ -12,7 +12,6 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, setDoc, query, writeBatch, getDocs } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { Separator } from "./ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -139,9 +138,8 @@ export const AttendancePage: FC = () => {
   const fetchStudentsAndAttendance = useCallback(async () => {
     setLoading(true);
 
-    const studentsCollection = collection(db, "students");
-    const studentsQuery = query(studentsCollection);
-    const studentsSnapshot = await getDocs(studentsQuery);
+    const studentsCollection = db.collection("students");
+    const studentsSnapshot = await studentsCollection.get();
     const studentsList = studentsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
@@ -149,9 +147,9 @@ export const AttendancePage: FC = () => {
     setStudents(studentsList);
 
     const dateDocId = format(selectedDate, "yyyy-MM-dd");
-    const attendanceRef = doc(db, "attendance", dateDocId);
-    const unsubAttendance = onSnapshot(attendanceRef, (docSnap) => {
-      if (docSnap.exists()) {
+    const attendanceRef = db.collection("attendance").doc(dateDocId);
+    const unsubAttendance = attendanceRef.onSnapshot((docSnap) => {
+      if (docSnap.exists) {
           setDailyStatus(docSnap.data() as DailyAttendance);
       } else {
           setDailyStatus({});
@@ -169,7 +167,7 @@ export const AttendancePage: FC = () => {
   useEffect(() => {
     const unsubscribePromise = fetchStudentsAndAttendance();
     return () => {
-      unsubscribePromise.then(unsub => unsub());
+      unsubscribePromise.then(unsub => unsub && unsub());
     };
   }, [fetchStudentsAndAttendance]);
 
@@ -195,8 +193,8 @@ export const AttendancePage: FC = () => {
     
     setDailyStatus(newStatus);
     try {
-        const attendanceRef = doc(db, "attendance", dateId);
-        await setDoc(attendanceRef, newStatus);
+        const attendanceRef = db.collection("attendance").doc(dateId);
+        await attendanceRef.set(newStatus);
     } catch (error) {
         toast({
             title: "Error",
@@ -212,8 +210,8 @@ export const AttendancePage: FC = () => {
       return;
     }
     try {
-      const attendanceRef = doc(db, "attendance", dateId);
-      await setDoc(attendanceRef, {});
+      const attendanceRef = db.collection("attendance").doc(dateId);
+      await attendanceRef.set({});
       setDailyStatus({});
       toast({
         title: "Success",

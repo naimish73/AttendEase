@@ -24,7 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { UserPlus } from "lucide-react";
 
 const studentSchema = z.object({
@@ -51,9 +50,9 @@ export const AddStudentForm: FC = () => {
   const onSubmit = async (data: StudentFormValues) => {
     setIsSubmitting(true);
     try {
-      const studentsRef = collection(db, "students");
-      const q = query(studentsRef, where("name", "==", data.name));
-      const querySnapshot = await getDocs(q);
+      const studentsRef = db.collection("students");
+      const q = studentsRef.where("name", "==", data.name);
+      const querySnapshot = await q.get();
 
       if (!querySnapshot.empty) {
         toast({
@@ -65,7 +64,7 @@ export const AddStudentForm: FC = () => {
         return;
       }
 
-      await addDoc(collection(db, "students"), {
+      await studentsRef.add({
         ...data,
         quizPoints: 0, // Initial quiz points
       });
