@@ -1,8 +1,8 @@
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-import { getAuth } from 'firebase/auth';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
+import 'firebase/compat/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAYX5cIh1CuNpgptj83ujMzs_t6t-UwSzk",
@@ -14,9 +14,29 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
-const storage = getStorage(app);
-const auth = getAuth(app);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
-export { app, db, storage, auth };
+const db = firebase.firestore();
+const storage = firebase.storage();
+const auth = firebase.auth();
+const GoogleAuthProvider = firebase.auth.GoogleAuthProvider;
+
+// We are exporting the firebase namespace, but also the individual services
+export { 
+  db, 
+  storage, 
+  auth, 
+  GoogleAuthProvider,
+  firebase
+};
+
+// Types are still useful
+export type User = firebase.User;
+export type FirebaseApp = firebase.app.App;
+
+// Functions for context can be simplified since they are on the auth object
+export const signInWithPopup = (auth: firebase.auth.Auth, provider: firebase.auth.AuthProvider) => auth.signInWithPopup(provider);
+export const onAuthStateChanged = (auth: firebase.auth.Auth, nextOrObserver: any) => auth.onAuthStateChanged(nextOrObserver);
+export const signOut = (auth: firebase.auth.Auth) => auth.signOut();

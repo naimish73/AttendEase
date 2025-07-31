@@ -1,10 +1,10 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { School } from 'lucide-react';
-import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, type User, firebase } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 const ALLOWED_EMAILS = [
@@ -34,10 +34,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser && ALLOWED_EMAILS.includes(currentUser.email || '')) {
         setUser(currentUser);
-        // No need to set localStorage here, Firebase handles persistence
       } else {
         setUser(null);
-        // If user is not allowed or logged out, sign them out from firebase as well
         if(auth.currentUser) {
           signOut(auth);
         }
@@ -52,7 +50,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged listener will handle setting user and redirecting
     } catch (error: any) {
         console.error("Error signing in with Google:", error);
         toast({
@@ -80,7 +77,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const isAuthenticated = !!user;
 
-  // Route protection
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated && pathname !== '/login') {
