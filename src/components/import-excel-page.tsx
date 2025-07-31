@@ -17,7 +17,7 @@ import { db } from "@/lib/firebase";
 import { collection, writeBatch, doc, getDocs, query, where, setDoc } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { Progress } from "./ui/progress";
-import { FileUp, CheckCircle, AlertCircle } from "lucide-react";
+import { FileUp, CheckCircle, AlertCircle, Percent } from "lucide-react";
 
 type StudentData = {
     name: string;
@@ -33,7 +33,7 @@ export const ImportExcelPage: FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [uploadResult, setUploadResult] = useState<{success: number, failed: number, duplicates: number} | null>(null);
+    const [uploadResult, setUploadResult] = useState<{success: number, failed: number, duplicates: number, total: number} | null>(null);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -67,8 +67,10 @@ export const ImportExcelPage: FC = () => {
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+                
+                const totalRows = json.length;
 
-                if (json.length === 0) {
+                if (totalRows === 0) {
                     toast({ title: "Empty Sheet", description: "The selected Excel sheet is empty.", variant: "destructive" });
                     setIsUploading(false);
                     return;
@@ -124,7 +126,7 @@ export const ImportExcelPage: FC = () => {
                         }
                     }
                     successCount++;
-                    setUploadProgress(((index + 1) / json.length) * 100);
+                    setUploadProgress(((index + 1) / totalRows) * 100);
                 }
 
                 await batch.commit();
@@ -163,7 +165,7 @@ export const ImportExcelPage: FC = () => {
                 }
                 await attendanceBatch.commit();
                 
-                setUploadResult({ success: successCount, failed: failedCount, duplicates: duplicateCount });
+                setUploadResult({ success: successCount, failed: failedCount, duplicates: duplicateCount, total: totalRows });
                 toast({
                     title: "Import Complete",
                     description: `${successCount} new students added. ${duplicateCount} duplicates skipped. ${failedCount > 0 ? `${failedCount} rows failed.` : ''} Attendance updated.`
@@ -176,7 +178,7 @@ export const ImportExcelPage: FC = () => {
                     description: "An error occurred while importing the data. Please check the file format and try again.",
                     variant: "destructive"
                 });
-                 setUploadResult({ success: 0, failed: 0, duplicates: 0 });
+                 setUploadResult({ success: 0, failed: 0, duplicates: 0, total: 0 });
             } finally {
                 setIsUploading(false);
                 setFile(null); // Clear file input
@@ -184,6 +186,10 @@ export const ImportExcelPage: FC = () => {
         };
         reader.readAsArrayBuffer(file);
     };
+
+    const joinedPercentage = uploadResult && uploadResult.total > 0
+        ? Math.round((uploadResult.success / uploadResult.total) * 100)
+        : 0;
 
     return (
         <Card className="w-full max-w-4xl mx-auto shadow-lg">
@@ -217,7 +223,7 @@ export const ImportExcelPage: FC = () => {
                 {uploadResult && (
                     <div className="p-4 rounded-lg bg-muted max-w-2xl">
                         <h3 className="font-semibold text-lg mb-2">Import Summary</h3>
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             <div className="flex items-center gap-2 text-green-600">
                                 <CheckCircle className="h-5 w-5" />
                                 <span>{uploadResult.success} Succeeded</span>
@@ -232,6 +238,10 @@ export const ImportExcelPage: FC = () => {
                                     <span>{uploadResult.failed} Failed</span>
                                 </div>
                             )}
+                             <div className="flex items-center gap-2 text-primary">
+                                <Percent className="h-5 w-5" />
+                                <span>{joinedPercentage}% Joined</span>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -239,5 +249,3 @@ export const ImportExcelPage: FC = () => {
         </Card>
     );
 }
-
-    
