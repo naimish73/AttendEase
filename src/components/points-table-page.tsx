@@ -62,6 +62,12 @@ type DailyAttendance = {
     [studentId: string]: "Present" | "Late";
 }
 
+type QuizResults = {
+    firstPlace?: string;
+    secondPlace?: string;
+    thirdPlace?: string;
+}
+
 export const PointsTablePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, DailyAttendance>>({});
@@ -71,11 +77,15 @@ export const PointsTablePage: FC = () => {
   const [firstPlace, setFirstPlace] = useState<string | undefined>();
   const [secondPlace, setSecondPlace] = useState<string | undefined>();
   const [thirdPlace, setThirdPlace] = useState<string | undefined>();
+  const [dailyQuizResults, setDailyQuizResults] = useState<QuizResults | null>(null);
+
 
   const { selectedDate } = useDate();
   const [activeTab, setActiveTab] = useState("daily");
   const [exportFileName, setExportFileName] = useState("");
   const [showScrollButtons, setShowScrollButtons] = useState(false);
+
+  const dateId = useMemo(() => selectedDate ? format(selectedDate, "yyyy-MM-dd") : null, [selectedDate]);
 
   const handleScroll = useCallback(() => {
     if (window.scrollY > 300) {
@@ -133,6 +143,32 @@ export const PointsTablePage: FC = () => {
         unsubAttendance();
     };
   }, [fetchStudents, fetchAttendance]);
+
+  useEffect(() => {
+    if (!dateId) {
+      setDailyQuizResults(null);
+      return;
+    };
+    
+    const quizResultsRef = db.collection("quizResults").doc(dateId);
+    const unsubQuizResults = quizResultsRef.onSnapshot((doc) => {
+        if(doc.exists) {
+            const data = doc.data() as QuizResults;
+            setDailyQuizResults(data);
+            setFirstPlace(data.firstPlace);
+            setSecondPlace(data.secondPlace);
+            setThirdPlace(data.thirdPlace);
+        } else {
+            setDailyQuizResults(null);
+            setFirstPlace(undefined);
+            setSecondPlace(undefined);
+            setThirdPlace(undefined);
+        }
+    });
+
+    return () => unsubQuizResults();
+
+  }, [dateId]);
   
   const overallStudentPoints = useMemo(() => {
     return students.map(student => {
@@ -181,6 +217,8 @@ export const PointsTablePage: FC = () => {
   }, [students, attendanceRecords, selectedDate]);
   
   const handleLogQuizResults = async () => {
+    if (!dateId) return;
+
     const winners = [firstPlace, secondPlace, thirdPlace].filter(Boolean);
     if (new Set(winners).size !== winners.length) {
         toast({ title: "Invalid Selection", description: "Please select unique students for each position.", variant: "destructive" });
@@ -189,31 +227,56 @@ export const PointsTablePage: FC = () => {
 
     try {
         const batch = db.batch();
-        const pointsToAdd = [
-            { id: firstPlace, points: 100 },
-            { id: secondPlace, points: 50 },
-            { id: thirdPlace, points: 25 },
-        ];
+        
+        // Point values for each place
+        const pointsMap: { [key: string]: number } = {
+            'firstPlace': 100,
+            'secondPlace': 50,
+            'thirdPlace': 25
+        };
 
-        for (const winner of pointsToAdd) {
-            if (winner.id) {
-                const studentRef = db.collection("students").doc(winner.id);
-                const studentSnap = await studentRef.get();
-                if (studentSnap.exists) {
-                    const currentPoints = studentSnap.data()?.quizPoints || 0;
-                    batch.update(studentRef, { quizPoints: currentPoints + winner.points });
+        const newResults: QuizResults = {
+            firstPlace: firstPlace,
+            secondPlace: secondPlace,
+            thirdPlace: thirdPlace,
+        };
+
+        const pointChanges: { [studentId: string]: number } = {};
+
+        // Calculate points removed from old winners
+        if(dailyQuizResults) {
+            for(const [place, studentId] of Object.entries(dailyQuizResults)) {
+                if(studentId && newResults[place as keyof QuizResults] !== studentId) {
+                    pointChanges[studentId] = (pointChanges[studentId] || 0) - pointsMap[place];
                 }
             }
         }
+
+        // Calculate points added for new winners
+        for(const [place, studentId] of Object.entries(newResults)) {
+            if(studentId && dailyQuizResults?.[place as keyof QuizResults] !== studentId) {
+                pointChanges[studentId] = (pointChanges[studentId] || 0) + pointsMap[place];
+            }
+        }
         
+        // Apply point changes to student documents
+        for(const [studentId, change] of Object.entries(pointChanges)) {
+            const studentRef = db.collection("students").doc(studentId);
+            const studentSnap = await studentRef.get();
+            if(studentSnap.exists) {
+                const currentPoints = studentSnap.data()?.quizPoints || 0;
+                batch.update(studentRef, { quizPoints: currentPoints + change });
+            }
+        }
+        
+        // Save the new quiz results for the day
+        const quizResultsRef = db.collection("quizResults").doc(dateId);
+        batch.set(quizResultsRef, newResults);
+
         await batch.commit();
 
-        toast({ title: "Quiz Results Logged", description: "Points have been awarded to the winners." });
-        setFirstPlace(undefined);
-        setSecondPlace(undefined);
-        setThirdPlace(undefined);
-    } catch (error)
-        {
+        toast({ title: "Quiz Results Logged", description: "Points have been awarded and updated successfully." });
+    } catch (error) {
         console.error("Error logging quiz results:", error);
         toast({ title: "Error", description: "Failed to log quiz results.", variant: "destructive" });
     }
@@ -449,7 +512,7 @@ export const PointsTablePage: FC = () => {
                                         </div>
                                         <DialogFooter>
                                             <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                                            <DialogClose asChild><Button onClick={handleLogQuizResults} disabled={!firstPlace && !secondPlace && !thirdPlace}>Award Points</Button></DialogClose>
+                                            <DialogClose asChild><Button onClick={handleLogQuizResults}>Award Points</Button></DialogClose>
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
