@@ -148,8 +148,8 @@ export const PointsTablePage: FC = () => {
   useEffect(() => {
     if (!dateId) return;
 
-    const quizResultsRef = db.collection('quizPoints').doc(dateId);
-    const unsubscribe = quizResultsRef.onSnapshot(doc => {
+    const quizPointsRef = db.collection('quizPoints').doc(dateId);
+    const unsubscribe = quizPointsRef.onSnapshot(doc => {
         if (doc.exists) {
             const data = doc.data() as DailyQuizWinners;
             setDailyQuizWinners(data);
@@ -199,9 +199,9 @@ export const PointsTablePage: FC = () => {
         attendancePoints = 50;
       }
       
-      const totalPoints = student.totalPoints || 0;
-      const grandTotal = attendancePoints; // Daily view should not include overall quiz points
-      return { ...student, attendancePoints, quizPoints: totalPoints, grandTotal };
+      const quizPoints = student.totalPoints || 0;
+      const grandTotal = attendancePoints + quizPoints;
+      return { ...student, attendancePoints, quizPoints, grandTotal };
     }).sort((a, b) => b.grandTotal - a.grandTotal);
   }, [students, attendanceRecords, selectedDate]);
 
@@ -217,9 +217,9 @@ export const PointsTablePage: FC = () => {
     if (!dateId) return;
 
     const newWinners = {
-        firstPlace: firstPlace || null,
-        secondPlace: secondPlace || null,
-        thirdPlace: thirdPlace || null,
+        firstPlace: firstPlace || undefined,
+        secondPlace: secondPlace || undefined,
+        thirdPlace: thirdPlace || undefined,
     };
     
     const uniqueWinners = [newWinners.firstPlace, newWinners.secondPlace, newWinners.thirdPlace].filter(Boolean);
@@ -231,16 +231,16 @@ export const PointsTablePage: FC = () => {
     try {
         const batch = db.batch();
         const quizPointsRef = db.collection('quizPoints').doc(dateId);
-
+        
         const pointValues: { [key: string]: number } = { firstPlace: 100, secondPlace: 50, thirdPlace: 25 };
         const pointChanges = new Map<string, number>();
+        
+        const oldWinners = dailyQuizWinners || {};
 
         // Calculate points to subtract from old winners
-        if (dailyQuizWinners) {
-            for (const [place, studentId] of Object.entries(dailyQuizWinners)) {
-                if (studentId) {
-                    pointChanges.set(studentId, (pointChanges.get(studentId) || 0) - pointValues[place]);
-                }
+        for (const [place, studentId] of Object.entries(oldWinners)) {
+            if (studentId) {
+                pointChanges.set(studentId, (pointChanges.get(studentId) || 0) - pointValues[place]);
             }
         }
         
@@ -251,7 +251,7 @@ export const PointsTablePage: FC = () => {
             }
         }
 
-        // Apply changes to student documents
+        // Apply net changes to student documents
         for (const [studentId, change] of pointChanges.entries()) {
             if (change !== 0) {
                 const studentRef = db.collection("students").doc(studentId);
@@ -307,14 +307,7 @@ export const PointsTablePage: FC = () => {
         fileNameSuffix = 'overall';
     } else {
         if (!selectedDate) return;
-        const dailyData = dailyStudentPoints.map(s => {
-            const overallStudent = overallStudentPoints.find(os => os.id === s.id);
-            return {
-                ...s,
-                grandTotal: s.attendancePoints + (overallStudent?.quizPoints || 0)
-            }
-        }).sort((a,b) => b.grandTotal - a.grandTotal);
-
+        const dailyData = dailyStudentPoints;
 
         dataToExport = dailyData.map((s, index) => ({
             'Rank': index + 1,
@@ -347,16 +340,10 @@ export const PointsTablePage: FC = () => {
     setExportFileName("");
   };
 
-  const renderTable = (data: typeof overallStudentPoints, isOverall: boolean) => {
+  const renderTable = (data: typeof dailyStudentPoints | typeof overallStudentPoints, isOverall: boolean) => {
     let sortedData = data;
-    if (!isOverall && selectedDate) {
-         sortedData = data.map(s => {
-            const overallStudent = overallStudentPoints.find(os => os.id === s.id);
-            return {
-                ...s,
-                grandTotal: s.attendancePoints + (overallStudent?.quizPoints || 0)
-            }
-        }).sort((a,b) => b.grandTotal - a.grandTotal);
+    if (isOverall) {
+        sortedData = overallStudentPoints;
     }
 
     return (
@@ -390,7 +377,7 @@ export const PointsTablePage: FC = () => {
                         </TableCell>
                         <TableCell>{student.attendancePoints}</TableCell>
                         <TableCell>{student.quizPoints || 0}</TableCell>
-                        <TableCell className="text-right font-bold text-teal-600 text-lg">{isOverall ? student.grandTotal : student.attendancePoints + (student.quizPoints || 0)}</TableCell>
+                        <TableCell className="text-right font-bold text-teal-600 text-lg">{student.grandTotal}</TableCell>
                     </TableRow>
                     ))
                 ) : (
@@ -569,3 +556,5 @@ export const PointsTablePage: FC = () => {
     </>
   );
 };
+
+    
