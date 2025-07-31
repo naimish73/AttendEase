@@ -7,43 +7,55 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, setDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
-type AttendanceStatus = "Present" | "Late";
+type AttendanceStatus = "Present" | "Late" | "Absent";
 type DailyAttendance = {
-    [studentId: string]: AttendanceStatus;
+    [studentId: string]: "Present" | "Late";
 }
 type Student = {
     id: string;
     name: string;
     class: string;
+    status?: AttendanceStatus;
 }
 
 export default function Home() {
   const { isAuthenticated, loading, logout, user } = useAuth();
-  const [totalStudents, setTotalStudents] = useState(0);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [todaysAttendance, setTodaysAttendance] = useState<DailyAttendance>({});
   const [date, setDate] = useState(new Date());
+  const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
+  
+  const dateId = useMemo(() => format(date, "yyyy-MM-dd"), [date]);
 
   useEffect(() => {
-    // Listener for total students
-    const unsubStudents = onSnapshot(doc(db, "students", "--total--"), (doc) => {
-        // This is a placeholder. A real implementation would query the collection size.
-        // For now, we'll get the count from the attendance for a rough estimate.
+    // Listener for all students
+    const studentsCollection = collection(db, "students");
+    const q = query(studentsCollection);
+    const unsubStudents = onSnapshot(q, (querySnapshot) => {
+        const studentsList = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Student[];
+        setAllStudents(studentsList);
     });
 
     // Listener for today's attendance
-    const todayId = format(new Date(), "yyyy-MM-dd");
-    const unsubAttendance = onSnapshot(doc(db, "attendance", todayId), (docSnap) => {
+    const unsubAttendance = onSnapshot(doc(db, "attendance", dateId), (docSnap) => {
         if(docSnap.exists()) {
             const data = docSnap.data() as DailyAttendance;
             setTodaysAttendance(data);
-            setTotalStudents(Object.keys(data).length); // Approximate total students for demo
         } else {
             setTodaysAttendance({});
         }
@@ -53,7 +65,63 @@ export default function Home() {
         unsubStudents();
         unsubAttendance();
     };
-  }, []);
+  }, [dateId]);
+
+  const studentsWithStatus = useMemo(() => {
+    const students = allStudents.map(student => ({
+      ...student,
+      status: todaysAttendance[student.id] || "Absent",
+    }));
+
+    const filtered = students.filter((student) => {
+      const term = searchTerm.toLowerCase();
+      return student.name.toLowerCase().includes(term);
+    });
+
+    const grouped: { [key: string]: Student[] } = filtered.reduce((acc, student) => {
+      const { class: studentClass } = student;
+      if (!acc[studentClass]) {
+        acc[studentClass] = [];
+      }
+      acc[studentClass].push(student);
+      return acc;
+    }, {} as { [key: string]: Student[] });
+
+    for (const studentClass in grouped) {
+      grouped[studentClass].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
+    return Object.keys(grouped).sort().reduce(
+      (obj, key) => { 
+        obj[key] = grouped[key]; 
+        return obj;
+      }, 
+      {} as {[key: string]: Student[]}
+    );
+
+  }, [allStudents, todaysAttendance, searchTerm]);
+
+  const handleStatusChange = async (studentId: string, status: "Present" | "Late" | "Absent") => {
+    const newStatus = { ...todaysAttendance };
+    
+    if (status === 'Absent') {
+        delete newStatus[studentId];
+    } else {
+        newStatus[studentId] = status;
+    }
+    
+    setTodaysAttendance(newStatus);
+    try {
+        const attendanceRef = doc(db, "attendance", dateId);
+        await setDoc(attendanceRef, newStatus);
+    } catch (error) {
+        toast({
+            title: "Error",
+            description: "Failed to update student status.",
+            variant: "destructive"
+        })
+    }
+  };
 
   if (loading || !isAuthenticated) {
     return null; // or a loading spinner
@@ -61,17 +129,29 @@ export default function Home() {
   
   const presentCount = Object.values(todaysAttendance).filter(s => s === 'Present').length;
   const lateCount = Object.values(todaysAttendance).filter(s => s === 'Late').length;
+  const totalStudents = allStudents.length;
   const absentCount = totalStudents > 0 ? totalStudents - presentCount - lateCount : 0;
   const attendancePercentage = totalStudents > 0 ? Math.round(((presentCount + lateCount) / totalStudents) * 100) : 0;
 
   const quickLinks = [
-    { href: "/attendance", icon: ClipboardCheck, title: "Take Attendance", description: "Mark daily attendance.", bg: "bg-teal-100", text: "text-teal-700" },
+    { href: "/attendance", icon: ClipboardCheck, title: "Full Attendance", description: "Go to detailed view.", bg: "bg-teal-100", text: "text-teal-700" },
     { href: "/points-table", icon: Trophy, title: "Points Table", description: "View student leaderboard.", bg: "bg-amber-100", text: "text-amber-700" },
     { href: "/manage-students", icon: Users, title: "Manage Students", description: "Add, edit, or remove students.", bg: "bg-sky-100", text: "text-sky-700" },
     { href: "/team-shuffle", icon: Shuffle, title: "Team Shuffle", description: "Create random student teams.", bg: "bg-rose-100", text: "text-rose-700" },
     { href: "/add-student", icon: UserPlus, title: "Add Student", description: "Quickly add a new student.", bg: "bg-indigo-100", text: "text-indigo-700" },
     { href: "/import-excel", icon: FileUp, title: "Import from Excel", description: "Bulk upload student data.", bg: "bg-slate-100", text: "text-slate-700" },
   ];
+  
+  const getStatusClasses = (currentStatus?: AttendanceStatus, buttonStatus?: AttendanceStatus) => {
+    if (currentStatus === buttonStatus) {
+        switch(buttonStatus) {
+            case 'Present': return 'bg-teal-500 text-white hover:bg-teal-600';
+            case 'Late': return 'bg-amber-500 text-white hover:bg-amber-600';
+            case 'Absent': return 'bg-red-500 text-white hover:bg-red-600';
+        }
+    }
+    return 'bg-gray-200 text-gray-700 hover:bg-gray-300';
+  }
 
   return (
     <div className="flex flex-col flex-1">
@@ -93,11 +173,11 @@ export default function Home() {
       </header>
       
       <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/40">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto space-y-8">
           {/* Daily Challenge / Attendance Card */}
-          <Card className="mb-8 shadow-lg">
+          <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="text-2xl font-headline">Today's Attendance</CardTitle>
+              <CardTitle className="text-2xl font-headline">Today's Attendance Summary</CardTitle>
               <CardDescription>A summary of student attendance for today.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -129,8 +209,72 @@ export default function Home() {
                 </div>
             </CardContent>
           </Card>
+
+          {/* Quick Attendance */}
+           <Card className="shadow-lg">
+            <CardHeader>
+              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                <div>
+                  <CardTitle className="text-2xl font-headline">Quick Attendance</CardTitle>
+                  <CardDescription>Quickly mark today's attendance. Current date: {format(date, "PPP")}</CardDescription>
+                </div>
+                <div className="relative w-full md:w-1/3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search students..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 w-full" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+                 <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+                    <Table>
+                      <TableHeader className="bg-slate-50 sticky top-0">
+                        <TableRow>
+                          <TableHead>Student Name</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loading ? (
+                          <TableRow><TableCell colSpan={2} className="h-24 text-center">Loading...</TableCell></TableRow>
+                        ) : Object.keys(studentsWithStatus).length > 0 ? (
+                          Object.entries(studentsWithStatus).map(([className, students]) => (
+                            <>
+                              <TableRow key={`header-${className}`} className="bg-muted/50 hover:bg-muted/50 sticky top-12">
+                                <TableCell colSpan={2} className="font-bold text-primary text-base py-3">
+                                  Class: {className}
+                                </TableCell>
+                              </TableRow>
+                              {students.map((student) => (
+                                <TableRow key={student.id} className="hover:bg-slate-50/50">
+                                  <TableCell className="font-medium">{student.name}</TableCell>
+                                  <TableCell className="text-right space-x-2">
+                                    <Button size="sm" className={cn('px-2 sm:px-4', getStatusClasses(student.status, 'Present'))} onClick={() => handleStatusChange(student.id, 'Present')}>
+                                        <UserCheck className="h-4 w-4 md:mr-2" />
+                                        <span className="hidden md:inline">Present</span>
+                                    </Button>
+                                    <Button size="sm" className={cn('px-2 sm:px-4', getStatusClasses(student.status, 'Late'))} onClick={() => handleStatusChange(student.id, 'Late')}>
+                                        <Clock className="h-4 w-4 md:mr-2" />
+                                        <span className="hidden md:inline">Late</span>
+                                    </Button>
+                                    <Button size="sm" className={cn('px-2 sm:px-4', getStatusClasses(student.status, 'Absent'))} onClick={() => handleStatusChange(student.id, 'Absent')}>
+                                        <UserX className="h-4 w-4 md:mr-2" />
+                                        <span className="hidden md:inline">Absent</span>
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </>
+                          ))
+                        ) : (
+                          <TableRow><TableCell colSpan={2} className="h-24 text-center">No students found. Add a student to get started.</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+            </CardContent>
+          </Card>
           
-          <h2 className="text-2xl font-bold font-headline mb-6">Quick Actions</h2>
+          <h2 className="text-2xl font-bold font-headline">Quick Actions</h2>
 
           {/* Action Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -17,7 +17,7 @@ import { db } from "@/lib/firebase";
 import { collection, writeBatch, doc, getDocs, query, where, setDoc } from "firebase/firestore";
 import * as XLSX from 'xlsx';
 import { Progress } from "./ui/progress";
-import { FileUp, CheckCircle, AlertCircle, Percent } from "lucide-react";
+import { FileUp, CheckCircle, AlertCircle } from "lucide-react";
 
 type StudentData = {
     name: string;
@@ -187,10 +187,6 @@ export const ImportExcelPage: FC = () => {
         reader.readAsArrayBuffer(file);
     };
 
-    const joinedPercentage = uploadResult && uploadResult.total > 0
-        ? Math.round((uploadResult.success / uploadResult.total) * 100)
-        : 0;
-
     return (
         <Card className="w-full max-w-4xl mx-auto shadow-lg">
             <CardHeader>
@@ -223,7 +219,7 @@ export const ImportExcelPage: FC = () => {
                 {uploadResult && (
                     <div className="p-4 rounded-lg bg-muted max-w-2xl">
                         <h3 className="font-semibold text-lg mb-2">Import Summary</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="flex items-center gap-2 text-green-600">
                                 <CheckCircle className="h-5 w-5" />
                                 <span>{uploadResult.success} Succeeded</span>
@@ -238,10 +234,6 @@ export const ImportExcelPage: FC = () => {
                                     <span>{uploadResult.failed} Failed</span>
                                 </div>
                             )}
-                             <div className="flex items-center gap-2 text-primary">
-                                <Percent className="h-5 w-5" />
-                                <span>{joinedPercentage}% Joined</span>
-                            </div>
                         </div>
                     </div>
                 )}
