@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { School } from 'lucide-react';
-import { auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, type User, firebase } from '@/lib/firebase';
+import { auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, type User } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 const ALLOWED_EMAILS = [
