@@ -271,43 +271,6 @@ export const PointsTablePage: FC = () => {
         }
     };
   
-  const handleResetDailyQuizPoints = async () => {
-    if (!dateId) return;
-    
-    const dailyResult = quizResults[dateId];
-    if (!dailyResult || (!dailyResult.first && !dailyResult.second && !dailyResult.third)) {
-        toast({ title: "No Points to Reset", description: "No quiz points were awarded on this date.", variant: "destructive" });
-        return;
-    }
-
-    try {
-        const batch = db.batch();
-        const pointValues: Record<string, number> = { first: 100, second: 50, third: 25 };
-        
-        for (const [place, studentId] of Object.entries(dailyResult)) {
-            if (studentId) {
-                const studentRef = db.collection("students").doc(studentId);
-                batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(-pointValues[place]) });
-            }
-        }
-
-        const quizResultRef = db.collection("quizResults").doc(dateId);
-        batch.delete(quizResultRef);
-
-        await batch.commit();
-
-        setFirstPlace(undefined);
-        setSecondPlace(undefined);
-        setThirdPlace(undefined);
-
-        toast({ title: "Success", description: `Quiz points for ${format(selectedDate!, "PPP")} have been reset.` });
-    } catch (error) {
-        console.error("Error resetting daily points: ", error);
-        toast({ title: "Error", description: "Failed to reset daily quiz points.", variant: "destructive" });
-    }
-  }
-
-
   const handleDownload = () => {
     if (!exportFileName.trim()) {
         toast({ title: "Error", description: "Please enter a valid file name.", variant: "destructive" });
@@ -535,23 +498,6 @@ export const PointsTablePage: FC = () => {
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="outline"><RotateCcw className="mr-2 h-4 w-4" />Reset Daily Quiz Points</Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action will remove the quiz points awarded on this date from the winners' total scores and cannot be undone.
-                                        </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleResetDailyQuizPoints}>Continue</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
                             </div>
                             {renderTable(dailyStudentPoints, false)}
                         </>
@@ -578,5 +524,3 @@ export const PointsTablePage: FC = () => {
     </>
   );
 };
-
-    
