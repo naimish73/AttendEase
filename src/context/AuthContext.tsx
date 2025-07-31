@@ -8,11 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 
 // This is a simplified, non-secure auth context for a local admin panel.
 // In a real application, you would use a secure authentication provider.
-const ADMIN_PASSWORD = "admin";
+const ADMIN_USERID = "youthsabha";
+const ADMIN_PASSWORD = "shreehari";
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (password: string) => void;
+  login: (userId: string, password: string) => void;
   logout: () => void;
   loading: boolean;
 }
@@ -50,8 +51,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [isAuthenticated, loading, pathname, router]);
 
 
-  const login = (password: string) => {
-    if (password === ADMIN_PASSWORD) {
+  const login = (userId: string, password: string) => {
+    if (userId === ADMIN_USERID && password === ADMIN_PASSWORD) {
       setIsAuthenticated(true);
       try {
         localStorage.setItem('isAdminAuthenticated', 'true');
@@ -61,8 +62,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       router.push('/');
     } else {
       toast({
-        title: "Invalid Password",
-        description: "The password you entered is incorrect.",
+        title: "Invalid Credentials",
+        description: "The user ID or password you entered is incorrect.",
         variant: "destructive",
       });
     }

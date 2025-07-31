@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,7 +26,7 @@ export default function LoginPage() {
     setIsLoading(true);
     // Simulate network delay
     setTimeout(() => {
-      login(password);
+      login(userId, password);
       setIsLoading(false);
     }, 500);
   };
@@ -41,10 +42,21 @@ export default function LoginPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl">Login</CardTitle>
-            <CardDescription>Enter the admin password to continue.</CardDescription>
+            <CardDescription>Enter your credentials to continue.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="userId">User ID</Label>
+                <Input
+                  id="userId"
+                  type="text"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="Enter your User ID"
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
