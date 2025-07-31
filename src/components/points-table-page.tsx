@@ -147,6 +147,9 @@ export const PointsTablePage: FC = () => {
   useEffect(() => {
     if (!dateId) {
       setDailyQuizResults(null);
+      setFirstPlace(undefined);
+      setSecondPlace(undefined);
+      setThirdPlace(undefined);
       return;
     };
     
@@ -203,7 +206,7 @@ export const PointsTablePage: FC = () => {
       }
       
       const quizPoints = student.quizPoints || 0;
-      const totalPoints = attendancePoints + quizPoints;
+      const totalPoints = attendancePoints; // Daily view should not include overall quiz points
       return { ...student, attendancePoints, quizPoints, totalPoints };
     }).sort((a, b) => b.totalPoints - a.totalPoints);
   }, [students, attendanceRecords, selectedDate]);
@@ -224,16 +227,11 @@ export const PointsTablePage: FC = () => {
         toast({ title: "Invalid Selection", description: "Please select unique students for each position.", variant: "destructive" });
         return;
     }
-
+    
     try {
         const batch = db.batch();
+        const pointsMap: { [key: string]: number } = { firstPlace: 100, secondPlace: 50, thirdPlace: 25 };
         
-        const pointsMap: { [key: string]: number } = {
-            firstPlace: 100,
-            secondPlace: 50,
-            thirdPlace: 25
-        };
-
         const newResults: QuizResults = {
             firstPlace: firstPlace,
             secondPlace: secondPlace,
@@ -242,32 +240,32 @@ export const PointsTablePage: FC = () => {
 
         const pointChanges: Record<string, number> = {};
 
-        // Calculate points to remove from previous winners (if they changed)
+        // Calculate points from old results
         if (dailyQuizResults) {
             for (const [place, studentId] of Object.entries(dailyQuizResults)) {
-                if (studentId && newResults[place as keyof QuizResults] !== studentId) {
+                if (studentId) {
                     pointChanges[studentId] = (pointChanges[studentId] || 0) - pointsMap[place];
                 }
             }
         }
-
-        // Calculate points to add for new winners (if they changed)
+        
+        // Calculate points from new results
         for (const [place, studentId] of Object.entries(newResults)) {
-             if (studentId && dailyQuizResults?.[place as keyof QuizResults] !== studentId) {
+            if (studentId) {
                 pointChanges[studentId] = (pointChanges[studentId] || 0) + pointsMap[place];
             }
         }
-        
-        // Apply point changes using the student data from state
+
+        // Apply the point changes
         for (const [studentId, change] of Object.entries(pointChanges)) {
-            const studentRef = db.collection("students").doc(studentId);
             const studentData = students.find(s => s.id === studentId);
-            if(studentData) {
-                 const currentPoints = studentData.quizPoints || 0;
-                 batch.update(studentRef, { quizPoints: currentPoints + change });
+            if (studentData) {
+                const studentRef = db.collection("students").doc(studentId);
+                const currentPoints = studentData.quizPoints || 0;
+                batch.update(studentRef, { quizPoints: currentPoints + change });
             }
         }
-        
+
         const quizResultsRef = db.collection("quizResults").doc(dateId);
         batch.set(quizResultsRef, newResults);
 
@@ -317,7 +315,16 @@ export const PointsTablePage: FC = () => {
         fileNameSuffix = 'overall';
     } else {
         if (!selectedDate) return;
-        dataToExport = dailyStudentPoints.map((s, index) => ({
+        const dailyData = dailyStudentPoints.map(s => {
+            const overallStudent = overallStudentPoints.find(os => os.id === s.id);
+            return {
+                ...s,
+                totalPoints: s.attendancePoints + (overallStudent?.quizPoints || 0)
+            }
+        }).sort((a,b) => b.totalPoints - a.totalPoints);
+
+
+        dataToExport = dailyData.map((s, index) => ({
             'Rank': index + 1,
             Name: s.name,
             Class: s.class,
@@ -348,47 +355,60 @@ export const PointsTablePage: FC = () => {
     setExportFileName("");
   };
 
-  const renderTable = (data: typeof overallStudentPoints) => (
-    <div className="border rounded-lg overflow-hidden">
-        <Table>
-            <TableHeader className="bg-slate-50">
-            <TableRow>
-                <TableHead className="w-[80px]">Rank</TableHead>
-                <TableHead>Student Name</TableHead>
-                <TableHead>Attendance Pts</TableHead>
-                <TableHead>Quiz Pts</TableHead>
-                <TableHead className="text-right">Total Points</TableHead>
-            </TableRow>
-            </TableHeader>
-            <TableBody>
-            {loading ? (
-                <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading points table...</TableCell></TableRow>
-            ) : data.length > 0 ? (
-                data.map((student, index) => (
-                <TableRow key={student.id} className={'hover:bg-slate-50/50'}>
-                    <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                           <span>{index + 1}</span>
-                           {index === 0 && <Medal className="h-5 w-5 text-yellow-500" />}
-                           {index === 1 && <Medal className="h-5 w-5 text-gray-400" />}
-                           {index === 2 && <Medal className="h-5 w-5 text-amber-700" />}
-                        </div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                        {student.name}
-                    </TableCell>
-                    <TableCell>{student.attendancePoints}</TableCell>
-                    <TableCell>{student.quizPoints || 0}</TableCell>
-                    <TableCell className="text-right font-bold text-teal-600 text-lg">{student.totalPoints}</TableCell>
+  const renderTable = (data: typeof overallStudentPoints, isOverall: boolean) => {
+    let sortedData = data;
+    if (!isOverall && selectedDate) {
+         sortedData = data.map(s => {
+            const overallStudent = overallStudentPoints.find(os => os.id === s.id);
+            return {
+                ...s,
+                totalPoints: s.attendancePoints + (overallStudent?.quizPoints || 0)
+            }
+        }).sort((a,b) => b.totalPoints - a.totalPoints);
+    }
+
+    return (
+        <div className="border rounded-lg overflow-hidden">
+            <Table>
+                <TableHeader className="bg-slate-50">
+                <TableRow>
+                    <TableHead className="w-[80px]">Rank</TableHead>
+                    <TableHead>Student Name</TableHead>
+                    <TableHead>Attendance Pts</TableHead>
+                    <TableHead>Quiz Pts</TableHead>
+                    <TableHead className="text-right">Total Points</TableHead>
                 </TableRow>
-                ))
-            ) : (
-                <TableRow><TableCell colSpan={5} className="h-24 text-center">No students found or no attendance data for this day.</TableCell></TableRow>
-            )}
-            </TableBody>
-        </Table>
-    </div>
-  )
+                </TableHeader>
+                <TableBody>
+                {loading ? (
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading points table...</TableCell></TableRow>
+                ) : sortedData.length > 0 ? (
+                    sortedData.map((student, index) => (
+                    <TableRow key={student.id} className={'hover:bg-slate-50/50'}>
+                        <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                            <span>{index + 1}</span>
+                            {index === 0 && <Medal className="h-5 w-5 text-yellow-500" />}
+                            {index === 1 && <Medal className="h-5 w-5 text-gray-400" />}
+                            {index === 2 && <Medal className="h-5 w-5 text-amber-700" />}
+                            </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                            {student.name}
+                        </TableCell>
+                        <TableCell>{student.attendancePoints}</TableCell>
+                        <TableCell>{student.quizPoints || 0}</TableCell>
+                        <TableCell className="text-right font-bold text-teal-600 text-lg">{student.totalPoints}</TableCell>
+                    </TableRow>
+                    ))
+                ) : (
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center">No students found or no attendance data for this day.</TableCell></TableRow>
+                )}
+                </TableBody>
+            </Table>
+        </div>
+    )
+  };
 
   const firstPlaceOptions = availableForQuiz.filter(s => s.id !== secondPlace && s.id !== thirdPlace);
   const secondPlaceOptions = availableForQuiz.filter(s => s.id !== firstPlace && s.id !== thirdPlace);
@@ -441,7 +461,7 @@ export const PointsTablePage: FC = () => {
                  <div className="flex gap-2 flex-wrap">
                     <Dialog>
                         <DialogTrigger asChild>
-                            <Button variant="outline" disabled={activeTab === 'daily' && !selectedDate}><Download className="mr-2 h-4 w-4" />Download</Button>
+                            <Button variant="outline" disabled={(activeTab === 'daily' && !selectedDate) || (activeTab === 'overall' && overallStudentPoints.length === 0)}><Download className="mr-2 h-4 w-4" />Download</Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
@@ -472,7 +492,7 @@ export const PointsTablePage: FC = () => {
                     <TabsTrigger value="overall">Overall Leaderboard</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overall" className="mt-4 space-y-4">
-                    {renderTable(overallStudentPoints)}
+                    {renderTable(overallStudentPoints, true)}
                 </TabsContent>
                 <TabsContent value="daily" className="mt-4">
                     {selectedDate ? (
@@ -532,7 +552,7 @@ export const PointsTablePage: FC = () => {
                                     </AlertDialogContent>
                                 </AlertDialog>
                             </div>
-                            {renderTable(dailyStudentPoints)}
+                            {renderTable(dailyStudentPoints, false)}
                         </>
                     ) : (
                         <div className="text-center py-12 text-muted-foreground">
@@ -557,3 +577,5 @@ export const PointsTablePage: FC = () => {
     </>
   );
 };
+
+    
