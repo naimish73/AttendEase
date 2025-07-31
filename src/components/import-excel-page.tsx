@@ -33,7 +33,7 @@ export const ImportExcelPage: FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [uploadResult, setUploadResult] = useState<{success: number, failed: number} | null>(null);
+    const [uploadResult, setUploadResult] = useState<{success: number, failed: number, duplicates: number} | null>(null);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -76,15 +76,20 @@ export const ImportExcelPage: FC = () => {
 
                 let successCount = 0;
                 let failedCount = 0;
+                let duplicateCount = 0;
                 
                 const studentsRef = collection(db, "students");
                 const existingStudentsSnap = await getDocs(studentsRef);
-                const existingStudents = new Map(existingStudentsSnap.docs.map(d => [d.data().name.toLowerCase(), {id: d.id, ...d.data()}]));
+                const existingStudents = new Set(existingStudentsSnap.docs.map(d => {
+                    const data = d.data();
+                    return `${String(data.name).toLowerCase()}_${String(data.mobile || '')}`;
+                }));
                 
                 const dateColumns = Object.keys(json[0] || {}).filter(key => isValidDateString(key));
                 const attendanceUpdates: Record<string, Record<string, AttendanceStatus>> = {};
                 
                 const batch = writeBatch(db);
+                const newStudentsForAttendance = new Map<string, string>(); // Maps unique key to new student ID
 
                 for (const [index, row] of json.entries()) {
                     if (!row.name || !row.class) {
@@ -97,17 +102,19 @@ export const ImportExcelPage: FC = () => {
                     const studentMobile = row.mobile ? String(row.mobile) : '';
                     const quizPoints = (typeof row.quizPoints === 'number' && !isNaN(row.quizPoints)) ? row.quizPoints : 0;
                     
-                    let studentId: string;
-                    const existingStudent = existingStudents.get(studentName.toLowerCase());
+                    const uniqueKey = `${studentName.toLowerCase()}_${studentMobile}`;
 
-                    if(existingStudent) {
-                        studentId = existingStudent.id;
-                    } else {
-                        const newStudentRef = doc(studentsRef);
-                        studentId = newStudentRef.id;
-                        const studentData = { name: studentName, class: studentClass, mobile: studentMobile, quizPoints };
-                        batch.set(newStudentRef, studentData);
+                    if (existingStudents.has(uniqueKey)) {
+                        duplicateCount++;
+                        continue; // Skip this duplicate row
                     }
+
+                    const newStudentRef = doc(studentsRef);
+                    const studentId = newStudentRef.id;
+                    const studentData = { name: studentName, class: studentClass, mobile: studentMobile, quizPoints };
+                    batch.set(newStudentRef, studentData);
+                    existingStudents.add(uniqueKey); // Add to set to prevent duplicates within the same file
+                    newStudentsForAttendance.set(uniqueKey, studentId);
 
                     for (const date of dateColumns) {
                         const status = String(row[date] || '').toUpperCase();
@@ -121,18 +128,45 @@ export const ImportExcelPage: FC = () => {
                 }
 
                 await batch.commit();
+                
+                // Fetch all students again to update attendance for existing ones not in this batch
+                const allStudentsSnap = await getDocs(studentsRef);
+                const allStudentsMap = new Map(allStudentsSnap.docs.map(d => {
+                    const data = d.data();
+                    const key = `${String(data.name).toLowerCase()}_${String(data.mobile || '')}`;
+                    return [key, d.id];
+                }));
+
+
+                const finalAttendanceUpdates: Record<string, Record<string, AttendanceStatus>> = {};
+                for (const row of json) {
+                    const studentName = String(row.name);
+                    const studentMobile = row.mobile ? String(row.mobile) : '';
+                    const uniqueKey = `${studentName.toLowerCase()}_${studentMobile}`;
+                    const studentId = allStudentsMap.get(uniqueKey);
+                    
+                    if (studentId) {
+                        for (const date of dateColumns) {
+                            const status = String(row[date] || '').toUpperCase();
+                            if (status === 'P' || status === 'L') {
+                                if (!finalAttendanceUpdates[date]) finalAttendanceUpdates[date] = {};
+                                finalAttendanceUpdates[date][studentId] = status === 'P' ? 'Present' : 'Late';
+                            }
+                        }
+                    }
+                }
 
                 const attendanceBatch = writeBatch(db);
-                for(const [date, statuses] of Object.entries(attendanceUpdates)) {
+                for(const [date, statuses] of Object.entries(finalAttendanceUpdates)) {
                     const attendanceRef = doc(db, 'attendance', date);
                     attendanceBatch.set(attendanceRef, statuses, { merge: true });
                 }
                 await attendanceBatch.commit();
                 
-                setUploadResult({ success: successCount, failed: failedCount });
+                setUploadResult({ success: successCount, failed: failedCount, duplicates: duplicateCount });
                 toast({
                     title: "Import Complete",
-                    description: `${successCount} students processed. ${failedCount > 0 ? `${failedCount} rows failed.` : ''} Historical attendance updated.`
+                    description: `${successCount} new students added. ${duplicateCount} duplicates skipped. ${failedCount > 0 ? `${failedCount} rows failed.` : ''} Attendance updated.`
                 });
 
             } catch (error) {
@@ -142,7 +176,7 @@ export const ImportExcelPage: FC = () => {
                     description: "An error occurred while importing the data. Please check the file format and try again.",
                     variant: "destructive"
                 });
-                 setUploadResult({ success: 0, failed: 0 });
+                 setUploadResult({ success: 0, failed: 0, duplicates: 0 });
             } finally {
                 setIsUploading(false);
                 setFile(null); // Clear file input
@@ -152,7 +186,7 @@ export const ImportExcelPage: FC = () => {
     };
 
     return (
-        <Card className="shadow-lg">
+        <Card className="w-full max-w-4xl mx-auto shadow-lg">
             <CardHeader>
                 <div className="flex items-start gap-4">
                     <div className="bg-primary/10 p-3 rounded-lg">
@@ -166,8 +200,8 @@ export const ImportExcelPage: FC = () => {
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-6 max-w-2xl">
-                <div className="space-y-2">
+            <CardContent className="space-y-6">
+                <div className="space-y-2 max-w-2xl">
                     <Label htmlFor="excel-file">Excel File</Label>
                     <Input id="excel-file" type="file" onChange={handleFileChange} accept=".xlsx, .xls" disabled={isUploading} key={file ? 'file-selected' : 'no-file'} />
                 </div>
@@ -177,16 +211,20 @@ export const ImportExcelPage: FC = () => {
                 </Button>
                 
                 {isUploading && (
-                    <Progress value={uploadProgress} className="w-full" />
+                    <Progress value={uploadProgress} className="w-full max-w-2xl" />
                 )}
 
                 {uploadResult && (
-                    <div className="p-4 rounded-lg bg-muted">
+                    <div className="p-4 rounded-lg bg-muted max-w-2xl">
                         <h3 className="font-semibold text-lg mb-2">Import Summary</h3>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                             <div className="flex items-center gap-2 text-green-600">
                                 <CheckCircle className="h-5 w-5" />
                                 <span>{uploadResult.success} Succeeded</span>
+                            </div>
+                             <div className="flex items-center gap-2 text-slate-600">
+                                <AlertCircle className="h-5 w-5" />
+                                <span>{uploadResult.duplicates} Duplicates</span>
                             </div>
                             {uploadResult.failed > 0 && (
                                 <div className="flex items-center gap-2 text-destructive">
@@ -201,3 +239,5 @@ export const ImportExcelPage: FC = () => {
         </Card>
     );
 }
+
+    
