@@ -28,17 +28,6 @@ import {
     DialogFooter,
     DialogClose,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -63,16 +52,9 @@ type DailyAttendance = {
     [studentId: string]: "Present" | "Late";
 }
 
-type DailyQuizResults = {
-    first?: string;
-    second?: string;
-    third?: string;
-}
-
 export const PointsTablePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, DailyAttendance>>({});
-  const [quizResults, setQuizResults] = useState<Record<string, DailyQuizResults>>({});
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
@@ -87,20 +69,6 @@ export const PointsTablePage: FC = () => {
   const [showScrollButtons, setShowScrollButtons] = useState(false);
 
   const dateId = useMemo(() => selectedDate ? format(selectedDate, "yyyy-MM-dd") : null, [selectedDate]);
-
-  useEffect(() => {
-    if (dateId) {
-      const dailyResult = quizResults[dateId] || {};
-      setFirstPlace(dailyResult.first);
-      setSecondPlace(dailyResult.second);
-      setThirdPlace(dailyResult.third);
-    } else {
-      setFirstPlace(undefined);
-      setSecondPlace(undefined);
-      setThirdPlace(undefined);
-    }
-  }, [dateId, quizResults]);
-
 
   const handleScroll = useCallback(() => {
     if (window.scrollY > 300) {
@@ -145,35 +113,19 @@ export const PointsTablePage: FC = () => {
     });
   }, [toast]);
 
-  const fetchQuizResults = useCallback(() => {
-    const quizResultsCollection = db.collection("quizResults");
-    return quizResultsCollection.onSnapshot((querySnapshot) => {
-        const records: Record<string, DailyQuizResults> = {};
-        querySnapshot.forEach(doc => {
-            records[doc.id] = doc.data() as DailyQuizResults;
-        });
-        setQuizResults(records);
-    }, (error) => {
-        console.error("Error fetching quiz results: ", error);
-        toast({ title: "Error fetching quiz results", variant: "destructive" });
-    });
-  }, [toast]);
-
 
   useEffect(() => {
     setLoading(true);
     const unsubStudents = fetchStudents();
     const unsubAttendance = fetchAttendance();
-    const unsubQuizResults = fetchQuizResults();
     
     setLoading(false);
 
     return () => {
         unsubStudents();
         unsubAttendance();
-        unsubQuizResults();
     };
-  }, [fetchStudents, fetchAttendance, fetchQuizResults]);
+  }, [fetchStudents, fetchAttendance]);
   
   const overallStudentPoints = useMemo(() => {
     return students.map(student => {
@@ -224,47 +176,38 @@ export const PointsTablePage: FC = () => {
     const handleLogQuizResults = async () => {
         if (!dateId) return;
 
-        const newWinners: DailyQuizResults = {
-            first: firstPlace,
-            second: secondPlace,
-            third: thirdPlace,
-        };
-
-        const oldWinners = quizResults[dateId] || {};
+        const winners = [
+            { id: firstPlace, points: 100 },
+            { id: secondPlace, points: 50 },
+            { id: thirdPlace, points: 25 },
+        ];
         
-        const pointChanges = new Map<string, number>();
-        const pointValues: Record<string, number> = { first: 100, second: 50, third: 25 };
-
-        // Calculate points to remove from old winners
-        for (const [place, studentId] of Object.entries(oldWinners)) {
-            if (studentId) {
-                pointChanges.set(studentId, (pointChanges.get(studentId) || 0) - pointValues[place]);
+        const uniqueWinners = new Set();
+        for (const winner of winners) {
+            if (winner.id) {
+                if(uniqueWinners.has(winner.id)) {
+                    toast({ title: "Error", description: "Each student can only win one prize.", variant: "destructive"});
+                    return;
+                }
+                uniqueWinners.add(winner.id);
             }
         }
         
-        // Calculate points to add for new winners
-        for (const [place, studentId] of Object.entries(newWinners)) {
-            if (studentId) {
-                pointChanges.set(studentId, (pointChanges.get(studentId) || 0) + pointValues[place]);
+        const batch = db.batch();
+        
+        for (const winner of winners) {
+            if (winner.id) {
+                const studentRef = db.collection("students").doc(winner.id);
+                batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(winner.points) });
             }
         }
         
         try {
-            const batch = db.batch();
-
-            // Apply point changes to student documents
-            for (const [studentId, change] of pointChanges.entries()) {
-                const studentRef = db.collection("students").doc(studentId);
-                batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(change) });
-            }
-
-            // Update the daily quiz result document
-            const quizResultRef = db.collection("quizResults").doc(dateId);
-            batch.set(quizResultRef, newWinners);
-            
             await batch.commit();
-
             toast({ title: "Quiz Results Logged", description: "Points have been updated successfully." });
+            setFirstPlace(undefined);
+            setSecondPlace(undefined);
+            setThirdPlace(undefined);
         } catch (error) {
             console.error("Error logging quiz results:", error);
             toast({ title: "Error", description: "Failed to log quiz results.", variant: "destructive" });
