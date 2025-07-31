@@ -29,7 +29,7 @@ type Student = {
 }
 
 export default function Home() {
-  const { isAuthenticated, loading, logout, user } = useAuth();
+  const { isAuthenticated, loading, logout } = useAuth();
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [todaysAttendance, setTodaysAttendance] = useState<DailyAttendance>({});
   const [date, setDate] = useState(new Date());
@@ -198,5 +198,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

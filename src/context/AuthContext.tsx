@@ -4,113 +4,81 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { School } from 'lucide-react';
-import { auth, GoogleAuthProvider, signInWithRedirect, onAuthStateChanged, signOut, type User, firebase, getRedirectResult } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
-const ALLOWED_EMAILS = [
-  "gurukulyouthsatsang2025@gmail.com",
-  "naimishbbhuva@gmail.com",
-  "axitkatharotiya2005@gmail.com"
-];
+// This is a simplified, non-secure auth context for a local admin panel.
+// In a real application, you would use a secure authentication provider.
+const ADMIN_PASSWORD = "admin";
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: User | null;
-  loginWithGoogle: () => void;
+  login: (password: string) => void;
   logout: () => void;
   loading: boolean;
-  isLoggingIn: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser && ALLOWED_EMAILS.includes(currentUser.email || '')) {
-        setUser(currentUser);
-      } else {
-        setUser(null);
-        if(auth.currentUser) {
-          signOut(auth);
-        }
+    // Check if the user is "logged in" from a previous session
+    try {
+      const storedAuth = localStorage.getItem('isAdminAuthenticated');
+      if (storedAuth === 'true') {
+        setIsAuthenticated(true);
       }
-      setLoading(false);
-    });
-    
-    // Handle redirect result
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result && result.user && !ALLOWED_EMAILS.includes(result.user.email || '')) {
-          toast({
-            title: "Access Denied",
-            description: "This email address is not authorized to access the application.",
-            variant: "destructive",
-          });
-          signOut(auth);
-        }
-      })
-      .catch((error) => {
-        console.error("Error getting redirect result:", error);
-      })
-      .finally(() => {
-        setIsLoggingIn(false);
-      });
-
-    return () => unsubscribe();
-  }, [toast]);
-
-  const loginWithGoogle = async () => {
-    setIsLoggingIn(true);
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithRedirect(auth, provider);
-    } catch (error: any) {
-        console.error("Error signing in with Google:", error);
-        toast({
-            title: "Authentication Failed",
-            description: error.message || "Could not sign in with Google. Please try again.",
-            variant: "destructive",
-          });
-        setIsLoggingIn(false);
+    } catch (error) {
+        // localStorage is not available on the server, so we can ignore this.
     }
-  };
-
-  const logout = async () => {
-    try {
-      await signOut(auth);
-      setUser(null);
-      router.push('/login');
-    } catch (error: any) {
-        console.error("Error signing out:", error);
-        toast({
-            title: "Logout Failed",
-            description: error.message || "Could not sign out. Please try again.",
-            variant: "destructive",
-          });
-    }
-  };
-
-  const isAuthenticated = !!user;
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    if (!loading && !isLoggingIn) {
+    if (!loading) {
       if (!isAuthenticated && pathname !== '/login') {
         router.push('/login');
       } else if (isAuthenticated && pathname === '/login') {
         router.push('/');
       }
     }
-  }, [isAuthenticated, loading, pathname, router, isLoggingIn]);
+  }, [isAuthenticated, loading, pathname, router]);
 
-  if (loading) {
+
+  const login = (password: string) => {
+    if (password === ADMIN_PASSWORD) {
+      setIsAuthenticated(true);
+      try {
+        localStorage.setItem('isAdminAuthenticated', 'true');
+      } catch (error) {
+        // localStorage not available
+      }
+      router.push('/');
+    } else {
+      toast({
+        title: "Invalid Password",
+        description: "The password you entered is incorrect.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+     try {
+        localStorage.removeItem('isAdminAuthenticated');
+      } catch (error) {
+        // localStorage not available
+      }
+    router.push('/login');
+  };
+
+  if (loading && pathname !== '/login') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
         <div className="flex items-center gap-4 mb-4">
@@ -123,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loginWithGoogle, logout, loading, isLoggingIn }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
