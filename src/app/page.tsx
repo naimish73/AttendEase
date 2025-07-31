@@ -128,6 +128,36 @@ export default function Home() {
       
       <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/40">
         <div className="max-w-7xl mx-auto space-y-8">
+          
+          <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle>Global Date Selector</CardTitle>
+                <CardDescription>Select a date to view attendance and points for that day across the app.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={selectedDate || undefined}
+                    onSelect={(date) => setSelectedDate(date || null)}
+                    disabled={isDayDisabled}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </CardContent>
+          </Card>
+
           {/* Daily Challenge / Attendance Card */}
           <Card className="shadow-lg">
             <CardHeader>
@@ -175,35 +205,6 @@ export default function Home() {
                         <p className="text-sm">Use the Global Date Selector below to load attendance data.</p>
                     </div>
                 )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg">
-            <CardHeader>
-                <CardTitle>Global Date Selector</CardTitle>
-                <CardDescription>Select a date to view attendance and points for that day across the app.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={selectedDate || undefined}
-                    onSelect={(date) => setSelectedDate(date || null)}
-                    disabled={isDayDisabled}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
             </CardContent>
           </Card>
           
