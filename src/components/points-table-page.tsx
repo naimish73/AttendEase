@@ -19,6 +19,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
     Dialog,
     DialogTrigger,
     DialogContent,
@@ -180,27 +191,26 @@ export const PointsTablePage: FC = () => {
             { id: firstPlace, points: 100 },
             { id: secondPlace, points: 50 },
             { id: thirdPlace, points: 25 },
-        ];
-        
-        const uniqueWinners = new Set();
-        for (const winner of winners) {
-            if (winner.id) {
-                if(uniqueWinners.has(winner.id)) {
-                    toast({ title: "Error", description: "Each student can only win one prize.", variant: "destructive"});
-                    return;
-                }
-                uniqueWinners.add(winner.id);
-            }
+        ].filter(w => w.id); // Filter out any undefined IDs
+
+        const uniqueWinnerIds = new Set(winners.map(w => w.id));
+        if (uniqueWinnerIds.size !== winners.length) {
+            toast({
+                title: "Duplicate Winners",
+                description: "The same student cannot be selected for multiple places.",
+                variant: "destructive",
+            });
+            return;
         }
-        
+
         const batch = db.batch();
         
-        for (const winner of winners) {
+        winners.forEach(winner => {
             if (winner.id) {
                 const studentRef = db.collection("students").doc(winner.id);
                 batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(winner.points) });
             }
-        }
+        });
         
         try {
             await batch.commit();
@@ -210,10 +220,33 @@ export const PointsTablePage: FC = () => {
             setThirdPlace(undefined);
         } catch (error) {
             console.error("Error logging quiz results:", error);
-            toast({ title: "Error", description: "Failed to log quiz results.", variant: "destructive" });
+            toast({ title: "Error", description: "Failed to log quiz results. Please try again.", variant: "destructive" });
         }
     };
   
+    const handleResetAllPoints = async () => {
+        const batch = db.batch();
+        students.forEach(student => {
+            const studentRef = db.collection("students").doc(student.id);
+            batch.update(studentRef, { totalPoints: 0 });
+        });
+
+        try {
+            await batch.commit();
+            toast({
+                title: "Success",
+                description: "All student quiz points have been reset to 0.",
+            });
+        } catch (error) {
+            console.error("Error resetting all points:", error);
+            toast({
+                title: "Error",
+                description: "Failed to reset quiz points. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
   const handleDownload = () => {
     if (!exportFileName.trim()) {
         toast({ title: "Error", description: "Please enter a valid file name.", variant: "destructive" });
@@ -366,6 +399,23 @@ export const PointsTablePage: FC = () => {
                     </CardDescription>
                 </div>
                  <div className="flex gap-2 flex-wrap">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={students.length === 0}><RotateCcw className="mr-2 h-4 w-4"/>Reset All Quiz Points</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently reset the quiz points for ALL students to 0.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleResetAllPoints}>Yes, reset all points</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button variant="outline" disabled={(activeTab === 'daily' && !selectedDate) || (activeTab === 'overall' && overallStudentPoints.length === 0)}><Download className="mr-2 h-4 w-4" />Download</Button>
@@ -467,3 +517,5 @@ export const PointsTablePage: FC = () => {
     </>
   );
 };
+
+    
