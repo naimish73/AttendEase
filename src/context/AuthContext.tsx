@@ -1,22 +1,22 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { School } from 'lucide-react';
-import { User } from 'firebase/auth'; // Keep for type consistency if needed elsewhere
+import { auth } from '@/lib/firebase';
+import { GoogleAuthProvider, signInWithPopup, User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
-// =================================================================================
-// Admin Credentials
-// =================================================================================
-const ADMIN_USER_ID = "AXITK010";
-const ADMIN_PASSWORD = "Gurukul@290705";
-// =================================================================================
+const ALLOWED_EMAILS = [
+  "gurukulyouthsatsang2025@gmail.com",
+  "naimishbbhuva@gmail.com",
+  "axitkatharotiya2005@gmail.com"
+];
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: User | null; // This can be a mock user object if needed
-  login: (userId: string, password: string) => boolean;
+  user: User | null;
+  loginWithGoogle: () => void;
   logout: () => void;
   loading: boolean;
 }
@@ -24,39 +24,72 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
   useEffect(() => {
-    try {
-      const storedAuth = localStorage.getItem('isAuthenticated');
-      if (storedAuth === 'true') {
-        setIsAuthenticated(true);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser && ALLOWED_EMAILS.includes(currentUser.email || '')) {
+        setUser(currentUser);
+        // No need to set localStorage here, Firebase handles persistence
+      } else {
+        setUser(null);
+        // If user is not allowed or logged out, sign them out from firebase as well
+        if(auth.currentUser) {
+          signOut(auth);
+        }
       }
-    } catch (error) {
-      console.error("Could not access localStorage", error);
-    } finally {
       setLoading(false);
-    }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = (userId: string, password: string): boolean => {
-    if (userId === ADMIN_USER_ID && password === ADMIN_PASSWORD) {
-      localStorage.setItem('isAuthenticated', 'true');
-      setIsAuthenticated(true);
-      router.push('/');
-      return true;
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged listener will handle setting user and redirecting
+    } catch (error: any) {
+        console.error("Error signing in with Google:", error);
+        toast({
+            title: "Authentication Failed",
+            description: error.message || "Could not sign in with Google. Please try again.",
+            variant: "destructive",
+          });
     }
-    return false;
   };
 
-  const logout = () => {
-    localStorage.removeItem('isAuthenticated');
-    setIsAuthenticated(false);
-    router.push('/login');
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      router.push('/login');
+    } catch (error: any) {
+        console.error("Error signing out:", error);
+        toast({
+            title: "Logout Failed",
+            description: error.message || "Could not sign out. Please try again.",
+            variant: "destructive",
+          });
+    }
   };
+
+  const isAuthenticated = !!user;
+
+  // Route protection
+  useEffect(() => {
+    if (!loading) {
+      if (!isAuthenticated && pathname !== '/login') {
+        router.push('/login');
+      } else if (isAuthenticated && pathname === '/login') {
+        router.push('/');
+      }
+    }
+  }, [isAuthenticated, loading, pathname, router]);
 
   if (loading) {
     return (
@@ -65,24 +98,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             <School className="h-10 w-10 text-primary animate-pulse" />
             <h1 className="text-4xl font-bold font-headline">AttendEase</h1>
         </div>
-        <p>Initializing...</p>
+        <p>Loading...</p>
       </div>
     );
   }
 
-  // Route protection
-  if (!loading && !isAuthenticated && pathname !== '/login') {
-    router.push('/login');
-    return null; // Render nothing while redirecting
-  }
-  
-  if (!loading && isAuthenticated && pathname === '/login') {
-    router.push('/');
-    return null; // Render nothing while redirecting
-  }
-
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user: null, login, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, loginWithGoogle, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
