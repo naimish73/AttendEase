@@ -63,12 +63,6 @@ type DailyAttendance = {
     [studentId: string]: "Present" | "Late";
 }
 
-type DailyQuizWinners = {
-    firstPlace?: string;
-    secondPlace?: string;
-    thirdPlace?: string;
-}
-
 export const PointsTablePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, DailyAttendance>>({});
@@ -78,7 +72,6 @@ export const PointsTablePage: FC = () => {
   const [firstPlace, setFirstPlace] = useState<string | undefined>();
   const [secondPlace, setSecondPlace] = useState<string | undefined>();
   const [thirdPlace, setThirdPlace] = useState<string | undefined>();
-  const [dailyQuizWinners, setDailyQuizWinners] = useState<DailyQuizWinners | null>(null);
 
 
   const { selectedDate } = useDate();
@@ -144,28 +137,6 @@ export const PointsTablePage: FC = () => {
         unsubAttendance();
     };
   }, [fetchStudents, fetchAttendance]);
-
-  useEffect(() => {
-    if (!dateId) return;
-
-    const quizPointsRef = db.collection('quizPoints').doc(dateId);
-    const unsubscribe = quizPointsRef.onSnapshot(doc => {
-        if (doc.exists) {
-            const data = doc.data() as DailyQuizWinners;
-            setDailyQuizWinners(data);
-            setFirstPlace(data.firstPlace);
-            setSecondPlace(data.secondPlace);
-            setThirdPlace(data.thirdPlace);
-        } else {
-            setDailyQuizWinners(null);
-            setFirstPlace(undefined);
-            setSecondPlace(undefined);
-            setThirdPlace(undefined);
-        }
-    });
-
-    return () => unsubscribe();
-  }, [dateId]);
   
   const overallStudentPoints = useMemo(() => {
     return students.map(student => {
@@ -214,15 +185,12 @@ export const PointsTablePage: FC = () => {
   }, [students, attendanceRecords, selectedDate]);
   
   const handleLogQuizResults = async () => {
-    if (!dateId) return;
+    if (!firstPlace && !secondPlace && !thirdPlace) {
+      toast({ title: "No selection", description: "Please select at least one winner.", variant: "destructive" });
+      return;
+    }
 
-    const newWinners = {
-        firstPlace: firstPlace || undefined,
-        secondPlace: secondPlace || undefined,
-        thirdPlace: thirdPlace || undefined,
-    };
-    
-    const uniqueWinners = [newWinners.firstPlace, newWinners.secondPlace, newWinners.thirdPlace].filter(Boolean);
+    const uniqueWinners = [firstPlace, secondPlace, thirdPlace].filter(Boolean);
     if (new Set(uniqueWinners).size !== uniqueWinners.length) {
         toast({ title: "Invalid Selection", description: "Please select unique students for each position.", variant: "destructive" });
         return;
@@ -230,40 +198,32 @@ export const PointsTablePage: FC = () => {
     
     try {
         const batch = db.batch();
-        const quizPointsRef = db.collection('quizPoints').doc(dateId);
-        
-        const pointValues: { [key: string]: number } = { firstPlace: 100, secondPlace: 50, thirdPlace: 25 };
-        const pointChanges = new Map<string, number>();
-        
-        const oldWinners = dailyQuizWinners || {};
+        const pointValues: { [key: string]: number } = {
+            [firstPlace || '']: 100,
+            [secondPlace || '']: 50,
+            [thirdPlace || '']: 25,
+        };
 
-        // Calculate points to subtract from old winners
-        for (const [place, studentId] of Object.entries(oldWinners)) {
-            if (studentId) {
-                pointChanges.set(studentId, (pointChanges.get(studentId) || 0) - pointValues[place]);
-            }
+        if (firstPlace) {
+            const studentRef = db.collection("students").doc(firstPlace);
+            batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(pointValues[firstPlace]) });
         }
-        
-        // Calculate points to add to new winners
-        for (const [place, studentId] of Object.entries(newWinners)) {
-            if (studentId) {
-                pointChanges.set(studentId, (pointChanges.get(studentId) || 0) + pointValues[place]);
-            }
+        if (secondPlace) {
+            const studentRef = db.collection("students").doc(secondPlace);
+            batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(pointValues[secondPlace]) });
         }
-
-        // Apply net changes to student documents
-        for (const [studentId, change] of pointChanges.entries()) {
-            if (change !== 0) {
-                const studentRef = db.collection("students").doc(studentId);
-                batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(change) });
-            }
+        if (thirdPlace) {
+            const studentRef = db.collection("students").doc(thirdPlace);
+            batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(pointValues[thirdPlace]) });
         }
-        
-        batch.set(quizPointsRef, newWinners);
         
         await batch.commit();
 
-        toast({ title: "Quiz Results Logged", description: "Points have been awarded and updated successfully." });
+        toast({ title: "Quiz Results Logged", description: "Points have been awarded successfully." });
+        setFirstPlace(undefined);
+        setSecondPlace(undefined);
+        setThirdPlace(undefined);
+
     } catch (error) {
         console.error("Error logging quiz results:", error);
         toast({ title: "Error", description: "Failed to log quiz results.", variant: "destructive" });
@@ -556,5 +516,3 @@ export const PointsTablePage: FC = () => {
     </>
   );
 };
-
-    
