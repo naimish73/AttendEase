@@ -66,7 +66,7 @@ export const AddStudentForm: FC = () => {
 
       await studentsRef.add({
         ...data,
-        quizPoints: 0, // Initial quiz points
+        totalPoints: 0, // Initial quiz points
       });
       toast({
         title: "Student Added",

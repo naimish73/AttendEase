@@ -22,7 +22,7 @@ type StudentData = {
     name: string;
     class: string;
     mobile?: string;
-    quizPoints: number;
+    totalPoints: number;
 }
 
 type AttendanceStatus = "Present" | "Late";
@@ -101,7 +101,7 @@ export const ImportExcelPage: FC = () => {
                     const studentName = String(row.name);
                     const studentClass = String(row.class);
                     const studentMobile = row.mobile ? String(row.mobile) : '';
-                    const quizPoints = (typeof row.quizPoints === 'number' && !isNaN(row.quizPoints)) ? row.quizPoints : 0;
+                    const totalPoints = (typeof row.totalPoints === 'number' && !isNaN(row.totalPoints)) ? row.totalPoints : 0;
                     
                     const uniqueKey = `${studentName.toLowerCase()}_${studentMobile}`;
 
@@ -112,7 +112,7 @@ export const ImportExcelPage: FC = () => {
 
                     const newStudentRef = studentsRef.doc();
                     const studentId = newStudentRef.id;
-                    const studentData = { name: studentName, class: studentClass, mobile: studentMobile, quizPoints };
+                    const studentData = { name: studentName, class: studentClass, mobile: studentMobile, totalPoints };
                     batch.set(newStudentRef, studentData);
                     existingStudents.add(uniqueKey); // Add to set to prevent duplicates within the same file
                     newStudentsForAttendance.set(uniqueKey, studentId);
@@ -196,7 +196,7 @@ export const ImportExcelPage: FC = () => {
                     <div>
                         <CardTitle className="text-2xl font-headline">Import Students from Excel</CardTitle>
                         <CardDescription>
-                            Upload an .xlsx or .xls file. Use columns 'name', 'class', 'mobile', 'quizPoints'. For attendance, add columns with date headers formatted as 'YYYY-MM-DD' (e.g., '2024-07-27') and use 'P' for Present or 'L' for Late as values.
+                            Upload an .xlsx or .xls file. Use columns 'name', 'class', 'mobile', 'totalPoints'. For attendance, add columns with date headers formatted as 'YYYY-MM-DD' (e.g., '2024-07-27') and use 'P' for Present or 'L' for Late as values.
                         </CardDescription>
                     </div>
                 </div>

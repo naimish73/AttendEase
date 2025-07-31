@@ -50,16 +50,23 @@ import * as XLSX from 'xlsx';
 import { Input } from "./ui/input";
 import { useDate } from "@/context/DateContext";
 import Link from "next/link";
+import firebase from "firebase/compat/app";
 
 type Student = {
   id: string;
   name: string;
   class: string;
-  quizPoints?: number;
+  totalPoints?: number;
 };
 
 type DailyAttendance = {
     [studentId: string]: "Present" | "Late";
+}
+
+type DailyQuizWinners = {
+    firstPlace?: string;
+    secondPlace?: string;
+    thirdPlace?: string;
 }
 
 export const PointsTablePage: FC = () => {
@@ -71,6 +78,7 @@ export const PointsTablePage: FC = () => {
   const [firstPlace, setFirstPlace] = useState<string | undefined>();
   const [secondPlace, setSecondPlace] = useState<string | undefined>();
   const [thirdPlace, setThirdPlace] = useState<string | undefined>();
+  const [dailyQuizWinners, setDailyQuizWinners] = useState<DailyQuizWinners | null>(null);
 
 
   const { selectedDate } = useDate();
@@ -137,6 +145,27 @@ export const PointsTablePage: FC = () => {
     };
   }, [fetchStudents, fetchAttendance]);
 
+  useEffect(() => {
+    if (!dateId) return;
+
+    const quizResultsRef = db.collection('quizPoints').doc(dateId);
+    const unsubscribe = quizResultsRef.onSnapshot(doc => {
+        if (doc.exists) {
+            const data = doc.data() as DailyQuizWinners;
+            setDailyQuizWinners(data);
+            setFirstPlace(data.firstPlace);
+            setSecondPlace(data.secondPlace);
+            setThirdPlace(data.thirdPlace);
+        } else {
+            setDailyQuizWinners(null);
+            setFirstPlace(undefined);
+            setSecondPlace(undefined);
+            setThirdPlace(undefined);
+        }
+    });
+
+    return () => unsubscribe();
+  }, [dateId]);
   
   const overallStudentPoints = useMemo(() => {
     return students.map(student => {
@@ -150,10 +179,10 @@ export const PointsTablePage: FC = () => {
         }
       });
       
-      const quizPoints = student.quizPoints || 0;
-      const totalPoints = attendancePoints + quizPoints;
-      return { ...student, attendancePoints, quizPoints, totalPoints };
-    }).sort((a, b) => b.totalPoints - a.totalPoints);
+      const totalPoints = student.totalPoints || 0;
+      const grandTotal = attendancePoints + totalPoints;
+      return { ...student, attendancePoints, quizPoints: totalPoints, grandTotal };
+    }).sort((a, b) => b.grandTotal - a.grandTotal);
   }, [students, attendanceRecords]);
   
   const dailyStudentPoints = useMemo(() => {
@@ -170,10 +199,10 @@ export const PointsTablePage: FC = () => {
         attendancePoints = 50;
       }
       
-      const quizPoints = student.quizPoints || 0;
-      const totalPoints = attendancePoints; // Daily view should not include overall quiz points
-      return { ...student, attendancePoints, quizPoints, totalPoints };
-    }).sort((a, b) => b.totalPoints - a.totalPoints);
+      const totalPoints = student.totalPoints || 0;
+      const grandTotal = attendancePoints; // Daily view should not include overall quiz points
+      return { ...student, attendancePoints, quizPoints: totalPoints, grandTotal };
+    }).sort((a, b) => b.grandTotal - a.grandTotal);
   }, [students, attendanceRecords, selectedDate]);
 
 
@@ -187,38 +216,52 @@ export const PointsTablePage: FC = () => {
   const handleLogQuizResults = async () => {
     if (!dateId) return;
 
-    const winners = [firstPlace, secondPlace, thirdPlace].filter(Boolean);
-    if (new Set(winners).size !== winners.length) {
+    const newWinners = {
+        firstPlace: firstPlace || null,
+        secondPlace: secondPlace || null,
+        thirdPlace: thirdPlace || null,
+    };
+    
+    const uniqueWinners = [newWinners.firstPlace, newWinners.secondPlace, newWinners.thirdPlace].filter(Boolean);
+    if (new Set(uniqueWinners).size !== uniqueWinners.length) {
         toast({ title: "Invalid Selection", description: "Please select unique students for each position.", variant: "destructive" });
         return;
     }
     
     try {
         const batch = db.batch();
-        const pointsMap: { [key: string]: number } = {
-            firstPlace: 100,
-            secondPlace: 50,
-            thirdPlace: 25,
-        };
-        const newWinners = { firstPlace, secondPlace, thirdPlace };
-        
-        for (const [place, studentId] of Object.entries(newWinners)) {
-            if (studentId) {
-                const studentRef = db.collection("students").doc(studentId);
-                const studentData = students.find(s => s.id === studentId);
-                if (studentData) {
-                    const currentPoints = studentData.quizPoints || 0;
-                    batch.update(studentRef, { quizPoints: currentPoints + pointsMap[place] });
+        const quizPointsRef = db.collection('quizPoints').doc(dateId);
+
+        const pointValues: { [key: string]: number } = { firstPlace: 100, secondPlace: 50, thirdPlace: 25 };
+        const pointChanges = new Map<string, number>();
+
+        // Calculate points to subtract from old winners
+        if (dailyQuizWinners) {
+            for (const [place, studentId] of Object.entries(dailyQuizWinners)) {
+                if (studentId) {
+                    pointChanges.set(studentId, (pointChanges.get(studentId) || 0) - pointValues[place]);
                 }
             }
         }
         
-        await batch.commit();
+        // Calculate points to add to new winners
+        for (const [place, studentId] of Object.entries(newWinners)) {
+            if (studentId) {
+                pointChanges.set(studentId, (pointChanges.get(studentId) || 0) + pointValues[place]);
+            }
+        }
+
+        // Apply changes to student documents
+        for (const [studentId, change] of pointChanges.entries()) {
+            if (change !== 0) {
+                const studentRef = db.collection("students").doc(studentId);
+                batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(change) });
+            }
+        }
         
-        // Reset selections
-        setFirstPlace(undefined);
-        setSecondPlace(undefined);
-        setThirdPlace(undefined);
+        batch.set(quizPointsRef, newWinners);
+        
+        await batch.commit();
 
         toast({ title: "Quiz Results Logged", description: "Points have been awarded and updated successfully." });
     } catch (error) {
@@ -231,9 +274,9 @@ export const PointsTablePage: FC = () => {
     try {
         const batch = db.batch();
         students.forEach(s => {
-            if (s.quizPoints && s.quizPoints > 0) {
+            if (s.totalPoints && s.totalPoints > 0) {
                 const studentRef = db.collection("students").doc(s.id);
-                batch.update(studentRef, { quizPoints: 0 });
+                batch.update(studentRef, { totalPoints: 0 });
             }
         });
         await batch.commit();
@@ -259,7 +302,7 @@ export const PointsTablePage: FC = () => {
             Class: s.class,
             'Attendance Points': s.attendancePoints,
             'Quiz Points': s.quizPoints || 0,
-            'Total Points': s.totalPoints
+            'Total Points': s.grandTotal
         }));
         fileNameSuffix = 'overall';
     } else {
@@ -268,9 +311,9 @@ export const PointsTablePage: FC = () => {
             const overallStudent = overallStudentPoints.find(os => os.id === s.id);
             return {
                 ...s,
-                totalPoints: s.attendancePoints + (overallStudent?.quizPoints || 0)
+                grandTotal: s.attendancePoints + (overallStudent?.quizPoints || 0)
             }
-        }).sort((a,b) => b.totalPoints - a.totalPoints);
+        }).sort((a,b) => b.grandTotal - a.grandTotal);
 
 
         dataToExport = dailyData.map((s, index) => ({
@@ -279,7 +322,7 @@ export const PointsTablePage: FC = () => {
             Class: s.class,
             'Attendance Points': s.attendancePoints,
             'Quiz Points': s.quizPoints || 0,
-            'Total Points': s.totalPoints
+            'Total Points': s.grandTotal
         }));
         fileNameSuffix = format(selectedDate, "yyyy-MM-dd");
     }
@@ -311,9 +354,9 @@ export const PointsTablePage: FC = () => {
             const overallStudent = overallStudentPoints.find(os => os.id === s.id);
             return {
                 ...s,
-                totalPoints: s.attendancePoints + (overallStudent?.quizPoints || 0)
+                grandTotal: s.attendancePoints + (overallStudent?.quizPoints || 0)
             }
-        }).sort((a,b) => b.totalPoints - a.totalPoints);
+        }).sort((a,b) => b.grandTotal - a.grandTotal);
     }
 
     return (
@@ -347,7 +390,7 @@ export const PointsTablePage: FC = () => {
                         </TableCell>
                         <TableCell>{student.attendancePoints}</TableCell>
                         <TableCell>{student.quizPoints || 0}</TableCell>
-                        <TableCell className="text-right font-bold text-teal-600 text-lg">{student.totalPoints}</TableCell>
+                        <TableCell className="text-right font-bold text-teal-600 text-lg">{isOverall ? student.grandTotal : student.attendancePoints + (student.quizPoints || 0)}</TableCell>
                     </TableRow>
                     ))
                 ) : (
@@ -526,5 +569,3 @@ export const PointsTablePage: FC = () => {
     </>
   );
 };
-
-    
