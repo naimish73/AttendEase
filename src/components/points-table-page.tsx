@@ -63,9 +63,16 @@ type DailyAttendance = {
     [studentId: string]: "Present" | "Late";
 }
 
+type QuizWinners = {
+  firstPlace?: string;
+  secondPlace?: string;
+  thirdPlace?: string;
+}
+
 export const PointsTablePage: FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, DailyAttendance>>({});
+  const [quizRecords, setQuizRecords] = useState<Record<string, QuizWinners>>({});
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
@@ -124,19 +131,53 @@ export const PointsTablePage: FC = () => {
     });
   }, [toast]);
 
+  const fetchQuizRecords = useCallback(() => {
+    const quizCollection = db.collection("quizPoints");
+    return quizCollection.onSnapshot((querySnapshot) => {
+        const records: Record<string, QuizWinners> = {};
+        querySnapshot.forEach(doc => {
+            records[doc.id] = doc.data() as QuizWinners;
+        });
+        console.log("Quiz records fetched:", records);
+        setQuizRecords(records);
+    }, (error) => {
+        console.error("Error fetching quiz records: ", error);
+        toast({ title: "Error fetching quiz records", variant: "destructive" });
+    });
+  }, [toast]);
+
 
   useEffect(() => {
     setLoading(true);
     const unsubStudents = fetchStudents();
     const unsubAttendance = fetchAttendance();
+    const unsubQuiz = fetchQuizRecords();
     
     setLoading(false);
 
     return () => {
         unsubStudents();
         unsubAttendance();
+        unsubQuiz();
     };
-  }, [fetchStudents, fetchAttendance]);
+  }, [fetchStudents, fetchAttendance, fetchQuizRecords]);
+
+  // Load existing quiz winners when date changes
+  useEffect(() => {
+    console.log("Date changed:", dateId, "Quiz records:", quizRecords);
+    if (dateId && quizRecords[dateId]) {
+      const existingWinners = quizRecords[dateId];
+      console.log("Found existing winners for", dateId, ":", existingWinners);
+      setFirstPlace(existingWinners.firstPlace);
+      setSecondPlace(existingWinners.secondPlace);
+      setThirdPlace(existingWinners.thirdPlace);
+    } else {
+      console.log("No existing winners found for", dateId);
+      setFirstPlace(undefined);
+      setSecondPlace(undefined);
+      setThirdPlace(undefined);
+    }
+  }, [dateId, quizRecords]);
   
   const overallStudentPoints = useMemo(() => {
     return students.map(student => {
@@ -205,6 +246,26 @@ export const PointsTablePage: FC = () => {
 
         const batch = db.batch();
         
+        // Check if there are existing winners for this date
+        const existingWinners = quizRecords[dateId];
+        
+        // If there are existing winners, first subtract their points
+        if (existingWinners) {
+            const existingWinnersList = [
+                { id: existingWinners.firstPlace, points: 100 },
+                { id: existingWinners.secondPlace, points: 50 },
+                { id: existingWinners.thirdPlace, points: 25 },
+            ].filter(w => w.id);
+            
+            existingWinnersList.forEach(winner => {
+                if (winner.id) {
+                    const studentRef = db.collection("students").doc(winner.id);
+                    batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(-winner.points) });
+                }
+            });
+        }
+        
+        // Add points for new winners
         winners.forEach(winner => {
             if (winner.id) {
                 const studentRef = db.collection("students").doc(winner.id);
@@ -212,15 +273,80 @@ export const PointsTablePage: FC = () => {
             }
         });
         
+        // Save quiz winners to quizPoints collection
+        const quizRef = db.collection("quizPoints").doc(dateId);
+        batch.set(quizRef, {
+            firstPlace: firstPlace || null,
+            secondPlace: secondPlace || null,
+            thirdPlace: thirdPlace || null,
+        });
+        
+        console.log("About to save quiz results:", {
+            dateId,
+            firstPlace,
+            secondPlace,
+            thirdPlace
+        });
+        
         try {
             await batch.commit();
+            console.log("Quiz results saved successfully");
             toast({ title: "Quiz Results Logged", description: "Points have been updated successfully." });
-            setFirstPlace(undefined);
-            setSecondPlace(undefined);
-            setThirdPlace(undefined);
         } catch (error) {
             console.error("Error logging quiz results:", error);
             toast({ title: "Error", description: "Failed to log quiz results. Please try again.", variant: "destructive" });
+        }
+    };
+  
+    const handleResetDateQuizPoints = async () => {
+        if (!dateId) return;
+
+        const existingWinners = quizRecords[dateId];
+        if (!existingWinners) {
+            toast({
+                title: "No Quiz Results",
+                description: "No quiz results found for this date.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const batch = db.batch();
+        
+        // Subtract points from existing winners
+        const winnersToReset = [
+            { id: existingWinners.firstPlace, points: 100 },
+            { id: existingWinners.secondPlace, points: 50 },
+            { id: existingWinners.thirdPlace, points: 25 },
+        ].filter(w => w.id);
+        
+        winnersToReset.forEach(winner => {
+            if (winner.id) {
+                const studentRef = db.collection("students").doc(winner.id);
+                batch.update(studentRef, { totalPoints: firebase.firestore.FieldValue.increment(-winner.points) });
+            }
+        });
+        
+        // Remove quiz record for this date
+        const quizRef = db.collection("quizPoints").doc(dateId);
+        batch.delete(quizRef);
+        
+        try {
+            await batch.commit();
+            setFirstPlace(undefined);
+            setSecondPlace(undefined);
+            setThirdPlace(undefined);
+            toast({
+                title: "Quiz Points Reset",
+                description: `Quiz points for ${format(selectedDate!, "PPP")} have been reset.`,
+            });
+        } catch (error) {
+            console.error("Error resetting date quiz points:", error);
+            toast({
+                title: "Error",
+                description: "Failed to reset quiz points. Please try again.",
+                variant: "destructive",
+            });
         }
     };
   
@@ -491,6 +617,25 @@ export const PointsTablePage: FC = () => {
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" disabled={!quizRecords[dateId!]}>
+                                            <RotateCcw className="mr-2 h-4 w-4" />Reset Date Quiz
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Reset Quiz Points for {format(selectedDate, "PPP")}?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will remove all quiz points awarded on this date and reset the winners. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleResetDateQuizPoints}>Yes, reset quiz points</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </div>
                             {renderTable(dailyStudentPoints, false)}
                         </>

@@ -11,5 +11,10 @@ service cloud.firestore {
     match /attendance/{date} {
       allow read, write: if true;
     }
+
+    // Allow public read/write access to the quizPoints collection
+    match /quizPoints/{date} {
+      allow read, write: if true;
+    }
   }
 }
