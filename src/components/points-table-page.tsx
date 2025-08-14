@@ -138,7 +138,6 @@ export const PointsTablePage: FC = () => {
         querySnapshot.forEach(doc => {
             records[doc.id] = doc.data() as QuizWinners;
         });
-        console.log("Quiz records fetched:", records);
         setQuizRecords(records);
     }, (error) => {
         console.error("Error fetching quiz records: ", error);
@@ -164,15 +163,12 @@ export const PointsTablePage: FC = () => {
 
   // Load existing quiz winners when date changes
   useEffect(() => {
-    console.log("Date changed:", dateId, "Quiz records:", quizRecords);
     if (dateId && quizRecords[dateId]) {
       const existingWinners = quizRecords[dateId];
-      console.log("Found existing winners for", dateId, ":", existingWinners);
       setFirstPlace(existingWinners.firstPlace);
       setSecondPlace(existingWinners.secondPlace);
       setThirdPlace(existingWinners.thirdPlace);
     } else {
-      console.log("No existing winners found for", dateId);
       setFirstPlace(undefined);
       setSecondPlace(undefined);
       setThirdPlace(undefined);
@@ -281,16 +277,8 @@ export const PointsTablePage: FC = () => {
             thirdPlace: thirdPlace || null,
         });
         
-        console.log("About to save quiz results:", {
-            dateId,
-            firstPlace,
-            secondPlace,
-            thirdPlace
-        });
-        
         try {
             await batch.commit();
-            console.log("Quiz results saved successfully");
             toast({ title: "Quiz Results Logged", description: "Points have been updated successfully." });
         } catch (error) {
             console.error("Error logging quiz results:", error);
