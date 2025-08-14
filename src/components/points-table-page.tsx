@@ -56,6 +56,8 @@ type Student = {
   id: string;
   name: string;
   class: string;
+  mobile?: string;
+  phone?: string;
   totalPoints?: number;
 };
 

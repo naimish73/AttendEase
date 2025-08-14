@@ -23,7 +23,8 @@ type Student = {
   id: string;
   name: string;
   class: string;
-  mobile: string;
+  mobile?: string;
+  phone?: string;
   status?: AttendanceStatus;
 };
 
@@ -57,7 +58,8 @@ const ExportDialog: FC<ExportDialogProps> = ({ students, date }) => {
           'Sr. No.': index + 1,
           Name: s.name,
           Class: s.class,
-          "Mobile No.": s.mobile || '',
+          "Mobile No. 1": s.mobile || '',
+          "Mobile No. 2": s.phone || '',
           Status: getStatusAbbreviation(s.status)
         }));
 
@@ -241,7 +243,8 @@ export const AttendancePage: FC = () => {
       return (
         student.name.toLowerCase().includes(term) ||
         student.class.toLowerCase().includes(term) ||
-        (student.mobile && student.mobile.toLowerCase().includes(term))
+        (student.mobile && student.mobile.toLowerCase().includes(term)) ||
+        (student.phone && student.phone.toLowerCase().includes(term))
       );
     });
 

@@ -22,6 +22,7 @@ type StudentData = {
     name: string;
     class: string;
     mobile?: string;
+    phone?: string;
     totalPoints: number;
 }
 
@@ -83,7 +84,7 @@ export const ImportExcelPage: FC = () => {
                 const existingStudentsSnap = await studentsRef.get();
                 const existingStudents = new Set(existingStudentsSnap.docs.map(d => {
                     const data = d.data();
-                    return `${String(data.name).toLowerCase()}_${String(data.mobile || '')}`;
+                    return `${String(data.name).toLowerCase()}_${String(data.mobile || '')}_${String(data.phone || '')}`;
                 }));
                 
                 const dateColumns = Object.keys(json[0] || {}).filter(key => isValidDateString(key));
@@ -101,9 +102,10 @@ export const ImportExcelPage: FC = () => {
                     const studentName = String(row.name);
                     const studentClass = String(row.class);
                     const studentMobile = row.mobile ? String(row.mobile) : '';
+                    const studentPhone = row.phone ? String(row.phone) : '';
                     const totalPoints = (typeof row.totalPoints === 'number' && !isNaN(row.totalPoints)) ? row.totalPoints : 0;
                     
-                    const uniqueKey = `${studentName.toLowerCase()}_${studentMobile}`;
+                    const uniqueKey = `${studentName.toLowerCase()}_${studentMobile}_${studentPhone}`;
 
                     if (existingStudents.has(uniqueKey)) {
                         duplicateCount++;
@@ -112,7 +114,7 @@ export const ImportExcelPage: FC = () => {
 
                     const newStudentRef = studentsRef.doc();
                     const studentId = newStudentRef.id;
-                    const studentData = { name: studentName, class: studentClass, mobile: studentMobile, totalPoints };
+                    const studentData = { name: studentName, class: studentClass, mobile: studentMobile, phone: studentPhone, totalPoints };
                     batch.set(newStudentRef, studentData);
                     existingStudents.add(uniqueKey); // Add to set to prevent duplicates within the same file
                     newStudentsForAttendance.set(uniqueKey, studentId);
@@ -134,7 +136,7 @@ export const ImportExcelPage: FC = () => {
                 const allStudentsSnap = await studentsRef.get();
                 const allStudentsMap = new Map(allStudentsSnap.docs.map(d => {
                     const data = d.data();
-                    const key = `${String(data.name).toLowerCase()}_${String(data.mobile || '')}`;
+                    const key = `${String(data.name).toLowerCase()}_${String(data.mobile || '')}_${String(data.phone || '')}`;
                     return [key, d.id];
                 }));
 
@@ -143,7 +145,8 @@ export const ImportExcelPage: FC = () => {
                 for (const row of json) {
                     const studentName = String(row.name);
                     const studentMobile = row.mobile ? String(row.mobile) : '';
-                    const uniqueKey = `${studentName.toLowerCase()}_${studentMobile}`;
+                    const studentPhone = row.phone ? String(row.phone) : '';
+                    const uniqueKey = `${studentName.toLowerCase()}_${studentMobile}_${studentPhone}`;
                     const studentId = allStudentsMap.get(uniqueKey);
                     
                     if (studentId) {

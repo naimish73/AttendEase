@@ -23,7 +23,8 @@ type Student = {
   id: string;
   name: string;
   class: string;
-  mobile: string;
+  mobile?: string;
+  phone?: string;
 };
 
 type DailyAttendance = {

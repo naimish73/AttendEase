@@ -33,6 +33,7 @@ const studentSchema = z.object({
   name: z.string().min(1, "Name is required"),
   class: z.string().min(1, "Class is required"),
   mobile: z.string().max(15, "Mobile number is too long").optional(),
+  phone: z.string().max(15, "Phone number is too long").optional(),
 });
 
 type StudentFormValues = z.infer<typeof studentSchema>;
@@ -53,6 +54,7 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
       name: "",
       class: "",
       mobile: "",
+      phone: "",
     },
   });
 
@@ -69,6 +71,7 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
                         name: studentData.name,
                         class: studentData.class,
                         mobile: studentData.mobile || "",
+                        phone: studentData.phone || "",
                     });
                 }
             } else {
@@ -198,9 +201,22 @@ export const EditStudentForm: FC<EditStudentFormProps> = ({ studentId }) => {
               name="mobile"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mobile No. (Optional)</FormLabel>
+                  <FormLabel>Mobile No. 1 (Optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. 9876543210" type="tel" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mobile No. 2 (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. 9123456789" type="tel" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

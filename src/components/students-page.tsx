@@ -39,7 +39,8 @@ type Student = {
   id: string;
   name: string;
   class: string;
-  mobile: string;
+  mobile?: string;
+  phone?: string;
   imageUrl?: string;
 };
 
@@ -176,7 +177,8 @@ export const StudentsPage: FC = () => {
       return (
         student.name.toLowerCase().includes(term) ||
         student.class.toLowerCase().includes(term) ||
-        (student.mobile && student.mobile.toLowerCase().includes(term))
+        (student.mobile && student.mobile.toLowerCase().includes(term)) ||
+        (student.phone && student.phone.toLowerCase().includes(term))
       );
     });
   }, [students, searchTerm]);
@@ -232,7 +234,7 @@ export const StudentsPage: FC = () => {
           <div className="relative mt-6">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, class, or mobile..."
+                placeholder="Search by name, class, or mobile numbers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 w-full md:w-1/2 lg:w-1/3"
@@ -244,16 +246,17 @@ export const StudentsPage: FC = () => {
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead>Student Name</TableHead>
+                                    <TableHead>Name</TableHead>
                   <TableHead>Class</TableHead>
-                  <TableHead>Mobile No.</TableHead>
-                  <TableHead className="text-right w-[140px]">Actions</TableHead>
+                  <TableHead>Mobile No. 1</TableHead>
+                  <TableHead>Mobile No. 2</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                       Loading students...
                     </TableCell>
                   </TableRow>
@@ -264,7 +267,8 @@ export const StudentsPage: FC = () => {
                         {student.name}
                       </TableCell>
                       <TableCell>{student.class}</TableCell>
-                      <TableCell>{student.mobile}</TableCell>
+                      <TableCell>{student.mobile || "-"}</TableCell>
+                      <TableCell>{student.phone || "-"}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button asChild variant="outline" size="icon">
                           <Link href={`/edit-student/${student.id}`}>
@@ -298,7 +302,7 @@ export const StudentsPage: FC = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                       No students found.
                     </TableCell>
                   </TableRow>
